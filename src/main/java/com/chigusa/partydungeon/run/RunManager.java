@@ -92,7 +92,7 @@ public final class RunManager {
         long returnTick;
         final List<SpawnState> spawns = new ArrayList<>();
         final Set<UUID> deadMobs = new java.util.HashSet<>();
-        final Map<UUID, BlockPos> mobLastPos = new HashMap<>();
+        final Map<UUID, Entity> mobRefs = new HashMap<>();
 
         Run(DungeonDef def, DungeonTemplate tpl, Room room) {
             this.def = def;
@@ -328,12 +328,9 @@ public final class RunManager {
                 p.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1f, 1f);
             }
             // 残っている敵は片付ける
-            for (SpawnState s : run.spawns) {
-                for (UUID id : s.mobs) {
-                    Entity e = arena.getEntity(id);
-                    if (e != null && e.isAlive()) {
-                        e.discard();
-                    }
+            for (Entity e : run.mobRefs.values()) {
+                if (!e.isRemoved()) {
+                    e.discard();
                 }
             }
         }
@@ -372,19 +369,39 @@ public final class RunManager {
         return any;
     }
 
+    /**
+     * 倒されたかどうか。
+     * 出した直後や、少し離れてチャンクが一時的に読み込まれていないときは、
+     * UUID で探しても見つからないことがあるため、出したときのエンティティを覚えておいて
+     * 「消えた理由」で判断する。
+     */
     private static boolean isDead(ServerLevel arena, Run run, UUID id) {
         if (run.deadMobs.contains(id)) {
             return true;
         }
-        Entity e = arena.getEntity(id);
-        if (e != null) {
-            run.mobLastPos.put(id, e.blockPosition());
-            return !e.isAlive();
+        Entity ref = run.mobRefs.get(id);
+        if (ref != null && !ref.isRemoved()) {
+            return !ref.isAlive();
         }
-        PartyDungeon.LOGGER.debug("[Party Dungeon] モブが見つからない: {}", id);
-        // 見つからない：チャンクが読み込まれているのにいないなら、消えたとみなす
-        BlockPos last = run.mobLastPos.get(id);
-        return last != null && arena.isLoaded(last);
+        if (ref != null) {
+            Entity.RemovalReason why = ref.getRemovalReason();
+            if (why != null && why.shouldDestroy()) {
+                // 倒された、または消された
+                return true;
+            }
+            if (why == Entity.RemovalReason.CHANGED_DIMENSION) {
+                // ポータルなどで部屋の外へ出てしまった
+                return true;
+            }
+        }
+        // チャンクの読み込み直しで別のオブジェクトになっている：探し直す
+        Entity now = arena.getEntity(id);
+        if (now != null) {
+            run.mobRefs.put(id, now);
+            return !now.isAlive();
+        }
+        // 見つからないだけなら、まだ生きているとみなす
+        return false;
     }
 
     private static void spawn(ServerLevel arena, Run run, SpawnState s) {
@@ -411,7 +428,7 @@ public final class RunManager {
                 mob.setPersistenceRequired();
             }
             s.mobs.add(e.getUUID());
-            run.mobLastPos.put(e.getUUID(), at);
+            run.mobRefs.put(e.getUUID(), e);
             BY_MOB.put(e.getUUID(), run);
         }
     }

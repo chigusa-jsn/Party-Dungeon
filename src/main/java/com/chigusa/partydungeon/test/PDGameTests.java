@@ -77,15 +77,23 @@ public final class PDGameTests {
                     RunManager.Run run = RunManager.runOf(id);
                     helper.assertTrue(run != null && run.state == RunManager.State.ACTIVE, "まだ開始していない");
                 })
+                .thenExecuteAfter(20, () -> {
+                    RunManager.Run run = RunManager.runOf(id);
+                    helper.assertTrue(run != null && run.state == RunManager.State.ACTIVE, "すぐにクリア扱いになってしまった");
+                })
+                .thenWaitUntil(() -> {
+                    RunManager.Run run = RunManager.runOf(id);
+                    helper.assertTrue(zombies(arena, run.room.origin).size() == 2, "ゾンビが2体見えない");
+                })
                 .thenExecute(() -> {
                     RunManager.Run run = RunManager.runOf(id);
+                    helper.assertTrue(run.state == RunManager.State.ACTIVE, "倒す前にクリアになった");
                     helper.assertTrue(player.level().dimension() == PDDimensions.ARENA, "挑戦用の世界に移動していない");
                     helper.assertTrue(player.gameMode.getGameModeForPlayer() == GameType.ADVENTURE, "アドベンチャーになっていない");
                     BlockPos o = run.room.origin;
                     helper.assertTrue(arena.getBlockState(o).is(Blocks.STONE_BRICKS), "部屋が組み立てられていない");
                     helper.assertTrue(arena.getBlockState(o.offset(2, 1, 2)).is(Blocks.CHEST), "チェストが再現されていない");
                     List<Zombie> zs = zombies(arena, o);
-                    helper.assertTrue(zs.size() == 2, "ゾンビが2体出ていない: " + zs.size());
                     // 爆発してもブロックが壊れないこと
                     arena.explode(null, o.getX() + 8, o.getY() + 1, o.getZ() + 1, 4f, Level.ExplosionInteraction.TNT);
                     helper.assertTrue(arena.getBlockState(o.offset(8, 0, 0)).is(Blocks.STONE_BRICKS), "爆発で壁が壊れた");
