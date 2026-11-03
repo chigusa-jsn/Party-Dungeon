@@ -37,6 +37,14 @@ public final class BlockJobs {
         QUEUE.add(job);
     }
 
+    /** その場で最後まで実行する（テスト用） */
+    public static void runNow(Job job) {
+        while (!job.step(1_000_000)) {
+            // 続ける
+        }
+        job.onDone();
+    }
+
     public static boolean isBusy() {
         return !QUEUE.isEmpty();
     }

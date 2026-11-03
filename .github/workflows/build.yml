@@ -24,6 +24,9 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build --stacktrace
 
+      - name: Run game tests (start a real server and play a dungeon)
+        run: ./gradlew runGameTestServer --stacktrace
+
       - name: Upload mod jar
         uses: actions/upload-artifact@v4
         with:
