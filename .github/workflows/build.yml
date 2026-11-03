@@ -24,6 +24,12 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build --stacktrace
 
+      - name: Start a real server and check the dimensions load
+        run: |
+          mkdir -p run && echo "eula=true" > run/eula.txt
+          ./gradlew runSelfTest 2>&1 | tee selftest.log
+          grep -q "PD-SELFTEST-OK" selftest.log
+
       - name: Run game tests (start a real server and play a dungeon)
         run: ./gradlew runGameTestServer --stacktrace
 

@@ -39,6 +39,9 @@ public final class PDGameTests {
     @GameTest(template = "empty", timeoutTicks = 2400)
     public static void fullRun(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
+        // テスト用サーバーには MOD の世界が無いので、ネザーとエンドで代用する
+        PDDimensions.ARENA = Level.NETHER;
+        PDDimensions.WORKSHOP = Level.END;
         ServerLevel ws = server.getLevel(PDDimensions.WORKSHOP);
         ServerLevel arena = server.getLevel(PDDimensions.ARENA);
         helper.assertTrue(ws != null, "作業場のディメンションがない");

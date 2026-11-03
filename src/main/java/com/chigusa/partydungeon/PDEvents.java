@@ -25,7 +25,15 @@ public final class PDEvents {
     public static void register() {
         var bus = NeoForge.EVENT_BUS;
         bus.addListener((RegisterCommandsEvent e) -> PDCommands.register(e.getDispatcher(), e.getBuildContext()));
-        bus.addListener((ServerStartedEvent e) -> RunManager.onServerStarted(e.getServer()));
+        bus.addListener((ServerStartedEvent e) -> {
+            RunManager.onServerStarted(e.getServer());
+            if (Boolean.getBoolean("partydungeon.selftest")) {
+                boolean ok = e.getServer().getLevel(PDDimensions.WORKSHOP) != null
+                        && e.getServer().getLevel(PDDimensions.ARENA) != null;
+                PartyDungeon.LOGGER.info(ok ? "PD-SELFTEST-OK" : "PD-SELFTEST-FAIL");
+                e.getServer().halt(false);
+            }
+        });
         bus.addListener((ServerStoppingEvent e) -> {
             RunManager.reset();
             PartyManager.reset();

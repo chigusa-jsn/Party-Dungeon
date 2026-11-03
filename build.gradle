@@ -67,6 +67,11 @@ neoForge {
         // This run config launches GameTestServer and runs all registered gametests, then exits.
         // By default, the server will crash when no gametests are provided.
         // The gametest system is also enabled by default for other run configs under the /test command.
+        selfTest {
+            server()
+            programArgument '--nogui'
+            systemProperty 'partydungeon.selftest', 'true'
+        }
         gameTestServer {
             type = "gameTestServer"
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id

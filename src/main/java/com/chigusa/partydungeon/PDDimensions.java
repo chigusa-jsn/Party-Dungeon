@@ -8,11 +8,13 @@ import net.minecraft.world.level.Level;
 
 /** このMODが使う2つのディメンション。中身は data/partydungeon/dimension/*.json で定義。 */
 public final class PDDimensions {
+    // 自動テストのときだけ別の世界に差し替えるため final にしていない
+
     /** ダンジョンを作るためのクリエイティブ作業場 */
-    public static final ResourceKey<Level> WORKSHOP = ResourceKey.create(Registries.DIMENSION,
+    public static ResourceKey<Level> WORKSHOP = ResourceKey.create(Registries.DIMENSION,
             ResourceLocation.fromNamespaceAndPath(PartyDungeon.MOD_ID, "workshop"));
     /** 挑戦用の部屋が並ぶ場所 */
-    public static final ResourceKey<Level> ARENA = ResourceKey.create(Registries.DIMENSION,
+    public static ResourceKey<Level> ARENA = ResourceKey.create(Registries.DIMENSION,
             ResourceLocation.fromNamespaceAndPath(PartyDungeon.MOD_ID, "arena"));
 
     /** 部屋・作業区画の床の高さ */
