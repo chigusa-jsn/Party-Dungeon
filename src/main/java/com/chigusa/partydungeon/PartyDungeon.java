@@ -18,6 +18,7 @@ public final class PartyDungeon {
 
     public PartyDungeon(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.SERVER, PDConfig.SPEC);
+        PDEvents.register();
         LOGGER.info("[Party Dungeon] 読み込みました");
     }
 }

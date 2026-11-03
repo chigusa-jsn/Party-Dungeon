@@ -23,6 +23,21 @@ public final class PDConfig {
             .comment("パーティの最大人数。")
             .defineInRange("party.maxSize", 5, 1, 20);
 
+    /** 1tick に置き換えるブロックの数 */
+    public static final ModConfigSpec.IntValue BLOCKS_PER_TICK = BUILDER
+            .comment("部屋の組み立て・リセットで 1tick（1/20秒）に置き換えるブロック数。重ければ減らしてください。")
+            .defineInRange("rooms.blocksPerTick", 20000, 500, 500000);
+
+    /** クリア後、元の場所に戻るまでの秒数 */
+    public static final ModConfigSpec.IntValue RETURN_DELAY_SECONDS = BUILDER
+            .comment("クリアしてから元の場所に戻るまでの秒数。")
+            .defineInRange("run.returnDelaySeconds", 10, 0, 300);
+
+    /** ダンジョン内で死んでも持ち物を失わない */
+    public static final ModConfigSpec.BooleanValue KEEP_INVENTORY = BUILDER
+            .comment("ダンジョンの中で死んでも、持ち物と経験値を失わない。")
+            .define("run.keepInventory", true);
+
     public static final ModConfigSpec SPEC = BUILDER.build();
 
     private PDConfig() {
