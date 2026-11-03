@@ -54,7 +54,7 @@ public final class WorkshopManager {
         }
         PDData data = PDData.get(server);
         if (!isIn(p)) {
-            data.returns.put(p.getUUID(), ReturnInfo.of(p));
+            data.workshopReturns.put(p.getUUID(), ReturnInfo.of(p));
             data.setDirty();
         }
         // 自分が最後に作った区画へ。無ければ入口へ
@@ -93,11 +93,11 @@ public final class WorkshopManager {
     /** /pd exit（作業場から出る） */
     public static boolean exit(MinecraftServer server, ServerPlayer p) {
         PDData data = PDData.get(server);
-        ReturnInfo info = data.returns.get(p.getUUID());
+        ReturnInfo info = data.workshopReturns.get(p.getUUID());
         if (!isIn(p) && info == null) {
             return false;
         }
-        data.returns.remove(p.getUUID());
+        data.workshopReturns.remove(p.getUUID());
         data.setDirty();
         if (info != null) {
             info.restore(p);
@@ -125,7 +125,7 @@ public final class WorkshopManager {
             return;
         }
         if (!isIn(p)) {
-            data.returns.put(p.getUUID(), ReturnInfo.of(p));
+            data.workshopReturns.put(p.getUUID(), ReturnInfo.of(p));
         }
         String id = "d" + data.nextId++;
         DungeonDef d = new DungeonDef(id, name, p.getUUID(), data.nextPlot++, size, height);

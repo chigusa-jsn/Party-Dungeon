@@ -2,7 +2,6 @@ package com.chigusa.partydungeon.menu;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,13 +19,22 @@ import net.minecraft.world.item.ItemStack;
  * アイテムはボタンとして表示されるだけで、取り出せない。
  */
 public final class ButtonMenu extends ChestMenu {
-    private final Map<Integer, Consumer<ServerPlayer>> actions;
+    /** ボタンを押したときの処理。button は 0=左クリック、1=右クリック */
+    @FunctionalInterface
+    public interface Action {
+        void run(ServerPlayer player, int button);
+    }
+
+    private final Map<Integer, Action> actions;
     private final int buttonSlots;
+    /** 画面の種類（自動で開き直すときの目印） */
+    public final String kind;
 
     private ButtonMenu(int id, Inventory inv, SimpleContainer container, int rows,
-            Map<Integer, Consumer<ServerPlayer>> actions) {
+            Map<Integer, Action> actions, String kind) {
         super(typeFor(rows), id, inv, container, rows);
         this.actions = actions;
+        this.kind = kind;
         this.buttonSlots = rows * 9;
     }
 
@@ -46,9 +54,13 @@ public final class ButtonMenu extends ChestMenu {
         // アイテムは一切動かさない
         if (player instanceof ServerPlayer sp) {
             if (slotId >= 0 && slotId < buttonSlots && clickType == ClickType.PICKUP) {
-                Consumer<ServerPlayer> action = actions.get(slotId);
+                Action action = actions.get(slotId);
                 if (action != null) {
-                    action.accept(sp);
+                    this.setCarried(ItemStack.EMPTY);
+                    action.run(sp, button);
+                    if (sp.containerMenu == this) {
+                        this.sendAllDataToRemote();
+                    }
                     return;
                 }
             }
@@ -67,7 +79,13 @@ public final class ButtonMenu extends ChestMenu {
         private final Component title;
         private final int rows;
         private final SimpleContainer container;
-        private final Map<Integer, Consumer<ServerPlayer>> actions = new HashMap<>();
+        private final Map<Integer, Action> actions = new HashMap<>();
+        private String kind = "";
+
+        public Builder kind(String kind) {
+            this.kind = kind;
+            return this;
+        }
 
         public Builder(Component title, int rows) {
             this.title = title;
@@ -75,7 +93,12 @@ public final class ButtonMenu extends ChestMenu {
             this.container = new SimpleContainer(this.rows * 9);
         }
 
-        public Builder button(int slot, ItemStack icon, Consumer<ServerPlayer> action) {
+        public Builder button(int slot, ItemStack icon, java.util.function.Consumer<ServerPlayer> action) {
+            return button2(slot, icon, action == null ? null : (p, b) -> action.accept(p));
+        }
+
+        /** 左右クリックを区別するボタン */
+        public Builder button2(int slot, ItemStack icon, Action action) {
             if (slot >= 0 && slot < rows * 9) {
                 container.setItem(slot, icon);
                 if (action != null) {
@@ -87,7 +110,7 @@ public final class ButtonMenu extends ChestMenu {
 
         public void open(ServerPlayer player) {
             player.openMenu(new SimpleMenuProvider(
-                    (id, inv, p) -> new ButtonMenu(id, inv, container, rows, actions), title));
+                    (id, inv, p) -> new ButtonMenu(id, inv, container, rows, actions, kind), title));
         }
     }
 }

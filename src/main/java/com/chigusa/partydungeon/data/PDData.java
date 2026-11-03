@@ -25,7 +25,10 @@ public final class PDData extends SavedData {
     private static final String NAME = "partydungeon";
 
     public final Map<String, DungeonDef> dungeons = new LinkedHashMap<>();
+    /** ダンジョンに入る前の場所 */
     public final Map<UUID, ReturnInfo> returns = new HashMap<>();
+    /** 作業場に入る前の場所（テストプレイ中も保持するため別に持つ） */
+    public final Map<UUID, ReturnInfo> workshopReturns = new HashMap<>();
     /** 部屋番号 → 片付けが必要な範囲（size, height） */
     public final Map<Integer, int[]> dirtyRooms = new HashMap<>();
     public int nextPlot;
@@ -71,6 +74,9 @@ public final class PDData extends SavedData {
         CompoundTag ret = new CompoundTag();
         returns.forEach((id, info) -> ret.put(id.toString(), info.save()));
         tag.put("returns", ret);
+        CompoundTag wret = new CompoundTag();
+        workshopReturns.forEach((id, info) -> wret.put(id.toString(), info.save()));
+        tag.put("workshopReturns", wret);
 
         CompoundTag dirty = new CompoundTag();
         dirtyRooms.forEach((room, sz) -> dirty.putIntArray(Integer.toString(room), sz));
@@ -94,6 +100,14 @@ public final class PDData extends SavedData {
                 data.returns.put(UUID.fromString(key), ReturnInfo.load(ret.getCompound(key)));
             } catch (IllegalArgumentException ignored) {
                 // 壊れたデータは読み飛ばす
+            }
+        }
+        CompoundTag wret = tag.getCompound("workshopReturns");
+        for (String key : wret.getAllKeys()) {
+            try {
+                data.workshopReturns.put(UUID.fromString(key), ReturnInfo.load(wret.getCompound(key)));
+            } catch (IllegalArgumentException ignored) {
+                // 読み飛ばす
             }
         }
         CompoundTag dirty = tag.getCompound("dirtyRooms");

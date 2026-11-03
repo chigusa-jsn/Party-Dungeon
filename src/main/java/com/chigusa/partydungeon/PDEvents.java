@@ -105,6 +105,11 @@ public final class PDEvents {
             }
         });
 
+        // ---- 画面まわり
+        bus.addListener(com.chigusa.partydungeon.menu.ChatInput::onChat);
+        bus.addListener(com.chigusa.partydungeon.npc.NpcManager::onInteract);
+        bus.addListener(com.chigusa.partydungeon.npc.NpcManager::onInteractSpecific);
+
         // ---- ログイン・ログアウト
         bus.addListener((PlayerEvent.PlayerLoggedInEvent e) -> {
             if (e.getEntity() instanceof ServerPlayer p) {
@@ -114,6 +119,7 @@ public final class PDEvents {
         bus.addListener((PlayerEvent.PlayerLoggedOutEvent e) -> {
             if (e.getEntity() instanceof ServerPlayer p) {
                 RunManager.onLogout(p.server, p);
+                com.chigusa.partydungeon.menu.ChatInput.forget(p.getUUID());
                 PartyManager.leave(p.server, p.getUUID(), p.getName().getString());
             }
         });

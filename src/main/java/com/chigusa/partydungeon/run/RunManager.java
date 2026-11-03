@@ -189,10 +189,6 @@ public final class RunManager {
                 Msg.warn(leader, p.getName().getString() + " さんは、もうダンジョンに入っています。");
                 return;
             }
-            if (data.returns.containsKey(p.getUUID()) || p.level().dimension() == PDDimensions.WORKSHOP) {
-                Msg.warn(leader, p.getName().getString() + " さんが作業場にいます。先に /pd exit で出てもらってください。");
-                return;
-            }
         }
         int cap = PDConfig.ROOMS_PER_DUNGEON.get();
         if (cap > 0 && activeCount(stored.id) >= cap) {

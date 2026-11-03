@@ -1,3 +1,5 @@
 {
-  "partydungeon.name": "パーティダンジョン"
+  "partydungeon.name": "パーティダンジョン",
+  "key.categories.partydungeon": "パーティダンジョン",
+  "key.partydungeon.menu": "メイン画面を開く"
 }

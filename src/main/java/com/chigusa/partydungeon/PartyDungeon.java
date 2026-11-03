@@ -19,6 +19,10 @@ public final class PartyDungeon {
     public PartyDungeon(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.SERVER, PDConfig.SPEC);
         PDEvents.register();
+        modBus.addListener(com.chigusa.partydungeon.net.OpenMenuPayload::register);
+        if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
+            com.chigusa.partydungeon.client.PDClient.init(modBus);
+        }
         LOGGER.info("[Party Dungeon] 読み込みました");
     }
 }

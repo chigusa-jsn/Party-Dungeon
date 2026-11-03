@@ -13,12 +13,18 @@ import javax.annotation.Nullable;
 import com.chigusa.partydungeon.PDConfig;
 import com.chigusa.partydungeon.util.Msg;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
  * パーティの管理。パーティはサーバーを再起動すると解散する（保存しない）。
  * パーティに入っていない人は「1人パーティ」として扱う。
+ * ロビー画面でダンジョンを選ぶと、1人でもパーティができる（そこに招待・募集できる）。
  */
 public final class PartyManager {
     /** 招待の有効時間（tick） */
@@ -27,10 +33,19 @@ public final class PartyManager {
     public static final class Party {
         public UUID leader;
         public final Set<UUID> members = new LinkedHashSet<>();
+        /** ロビーで選んでいるダンジョン */
+        @Nullable
+        public String dungeonId;
+        /** 仲間を募集中か */
+        public boolean recruiting;
 
         Party(UUID leader) {
             this.leader = leader;
             members.add(leader);
+        }
+
+        public boolean isFull() {
+            return members.size() >= PDConfig.MAX_PARTY_SIZE.get();
         }
     }
 
@@ -45,21 +60,36 @@ public final class PartyManager {
         return BY_PLAYER.get(player);
     }
 
+    /** パーティに入っていなければ、自分がリーダーの1人パーティを作る */
+    public static Party getOrCreate(UUID player) {
+        return BY_PLAYER.computeIfAbsent(player, Party::new);
+    }
+
     /** そのプレイヤーがリーダーか、パーティに入っていない */
     public static boolean canLead(UUID player) {
         Party p = BY_PLAYER.get(player);
         return p == null || p.leader.equals(player);
     }
 
+    /** 募集中のパーティ一覧 */
+    public static List<Party> recruiting() {
+        List<Party> list = new ArrayList<>();
+        for (Party p : new LinkedHashSet<>(BY_PLAYER.values())) {
+            if (p.recruiting && !p.isFull()) {
+                list.add(p);
+            }
+        }
+        return list;
+    }
+
     /** 一緒に入場するメンバー（オンラインの人だけ。リーダーが先頭） */
     public static List<ServerPlayer> onlineMembers(MinecraftServer server, ServerPlayer leader) {
         List<ServerPlayer> list = new ArrayList<>();
+        list.add(leader);
         Party p = BY_PLAYER.get(leader.getUUID());
         if (p == null) {
-            list.add(leader);
             return list;
         }
-        list.add(leader);
         for (UUID id : p.members) {
             if (id.equals(leader.getUUID())) {
                 continue;
@@ -77,54 +107,84 @@ public final class PartyManager {
             Msg.warn(from, "自分は招待できません。");
             return;
         }
-        Party p = BY_PLAYER.get(from.getUUID());
-        if (p != null && !p.leader.equals(from.getUUID())) {
+        Party p = getOrCreate(from.getUUID());
+        if (!p.leader.equals(from.getUUID())) {
             Msg.warn(from, "招待できるのはリーダーだけです。");
             return;
         }
-        if (BY_PLAYER.containsKey(to.getUUID())) {
+        Party theirs = BY_PLAYER.get(to.getUUID());
+        if (theirs != null && theirs.members.size() > 1) {
             Msg.warn(from, to.getName().getString() + " さんは、もう別のパーティに入っています。");
             return;
         }
-        int size = p == null ? 1 : p.members.size();
-        if (size >= PDConfig.MAX_PARTY_SIZE.get()) {
+        if (p.isFull()) {
             Msg.warn(from, "パーティは最大 " + PDConfig.MAX_PARTY_SIZE.get() + " 人までです。");
             return;
         }
         INVITES.put(to.getUUID(), new Invite(from.getUUID(), from.serverLevel().getGameTime() + INVITE_TICKS));
         Msg.ok(from, to.getName().getString() + " さんを招待しました。");
-        Msg.info(to, from.getName().getString() + " さんからパーティに招待されました。");
-        Msg.info(to, "参加するなら /pd party accept 、断るなら /pd party decline （2分以内）");
+        to.sendSystemMessage(Msg.info(from.getName().getString() + " さんからパーティに招待されました。 ")
+                .copy()
+                .append(button("[参加する]", "/pd party accept", ChatFormatting.GREEN))
+                .append(" ")
+                .append(button("[断る]", "/pd party decline", ChatFormatting.RED)));
     }
 
-    public static void accept(MinecraftServer server, ServerPlayer player) {
+    /** クリックするとコマンドが実行されるチャットのボタン */
+    public static MutableComponent button(String label, String command, ChatFormatting color) {
+        return Component.literal(label).withStyle(s -> s.withColor(color).withBold(true)
+                .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
+                .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Component.literal("クリック"))));
+    }
+
+    public static boolean accept(MinecraftServer server, ServerPlayer player) {
         Invite inv = INVITES.remove(player.getUUID());
         if (inv == null || inv.expires < player.serverLevel().getGameTime()) {
             Msg.warn(player, "有効な招待がありません。");
-            return;
+            return false;
         }
-        if (BY_PLAYER.containsKey(player.getUUID())) {
-            Msg.warn(player, "先に今のパーティを抜けてください（/pd party leave）。");
-            return;
+        return joinParty(server, player, inv.leader);
+    }
+
+    /** 募集中のパーティに参加する */
+    public static boolean joinRecruit(MinecraftServer server, ServerPlayer player, UUID leader) {
+        Party p = BY_PLAYER.get(leader);
+        if (p == null || !p.recruiting || !p.leader.equals(leader)) {
+            Msg.warn(player, "そのパーティは、もう募集していません。");
+            return false;
         }
-        ServerPlayer leader = server.getPlayerList().getPlayer(inv.leader);
-        if (leader == null) {
-            Msg.warn(player, "招待した人がオフラインです。");
-            return;
+        return joinParty(server, player, leader);
+    }
+
+    private static boolean joinParty(MinecraftServer server, ServerPlayer player, UUID leader) {
+        Party mine = BY_PLAYER.get(player.getUUID());
+        if (mine != null && mine.members.size() > 1) {
+            Msg.warn(player, "先に今のパーティを抜けてください。");
+            return false;
         }
-        Party p = BY_PLAYER.get(inv.leader);
-        if (p == null) {
-            p = new Party(inv.leader);
-            BY_PLAYER.put(inv.leader, p);
+        if (server.getPlayerList().getPlayer(leader) == null) {
+            Msg.warn(player, "リーダーがオフラインです。");
+            return false;
         }
-        if (p.members.size() >= PDConfig.MAX_PARTY_SIZE.get()) {
+        Party p = getOrCreate(leader);
+        if (p.members.contains(player.getUUID())) {
+            return true;
+        }
+        if (p.isFull()) {
             Msg.warn(player, "パーティが満員です。");
-            return;
+            return false;
+        }
+        if (mine != null) {
+            BY_PLAYER.remove(player.getUUID());
         }
         p.members.add(player.getUUID());
         BY_PLAYER.put(player.getUUID(), p);
         broadcast(server, p, player.getName().getString() + " さんがパーティに参加しました。（"
                 + p.members.size() + "/" + PDConfig.MAX_PARTY_SIZE.get() + "）");
+        if (p.isFull()) {
+            p.recruiting = false;
+        }
+        return true;
     }
 
     public static void decline(ServerPlayer player) {
@@ -147,38 +207,54 @@ public final class PartyManager {
         if (p.leader.equals(playerId)) {
             p.leader = p.members.iterator().next();
         }
-        if (p.members.size() == 1) {
-            // 1人だけ残ったら解散
-            UUID last = p.members.iterator().next();
-            BY_PLAYER.remove(last);
-            ServerPlayer sp = server.getPlayerList().getPlayer(last);
-            if (sp != null) {
-                Msg.info(sp, name + " さんが抜けたので、パーティは解散しました。");
-            }
-            return;
-        }
         String leaderName = nameOf(server, p.leader);
         broadcast(server, p, name + " さんがパーティを抜けました。リーダー: " + leaderName);
     }
 
-    public static void kick(MinecraftServer server, ServerPlayer leader, ServerPlayer target) {
+    public static void kick(MinecraftServer server, ServerPlayer leader, UUID target) {
         Party p = BY_PLAYER.get(leader.getUUID());
         if (p == null || !p.leader.equals(leader.getUUID())) {
             Msg.warn(leader, "外せるのはリーダーだけです。");
             return;
         }
-        if (!p.members.contains(target.getUUID()) || target == leader) {
+        if (!p.members.contains(target) || target.equals(leader.getUUID())) {
             Msg.warn(leader, "その人はパーティのメンバーではありません。");
             return;
         }
-        Msg.info(target, "パーティから外されました。");
-        leave(server, target.getUUID(), target.getName().getString());
+        ServerPlayer sp = server.getPlayerList().getPlayer(target);
+        if (sp != null) {
+            Msg.info(sp, "パーティから外されました。");
+        }
+        leave(server, target, nameOf(server, target));
+    }
+
+    /** 募集を始める／やめる。始めたときはサーバー全員に知らせる */
+    public static void setRecruiting(MinecraftServer server, ServerPlayer leader, boolean on, String dungeonName) {
+        Party p = getOrCreate(leader.getUUID());
+        if (!p.leader.equals(leader.getUUID())) {
+            Msg.warn(leader, "募集できるのはリーダーだけです。");
+            return;
+        }
+        p.recruiting = on;
+        if (!on) {
+            Msg.info(leader, "募集をやめました。");
+            return;
+        }
+        Component msg = Msg.info(leader.getName().getString() + " さんが「" + dungeonName + "」の仲間を募集中！（"
+                + p.members.size() + "/" + PDConfig.MAX_PARTY_SIZE.get() + "） ").copy()
+                .append(button("[参加する]", "/pd join " + leader.getName().getString(), ChatFormatting.GREEN));
+        for (ServerPlayer sp : server.getPlayerList().getPlayers()) {
+            if (!p.members.contains(sp.getUUID())) {
+                sp.sendSystemMessage(msg);
+            }
+        }
+        Msg.ok(leader, "募集を始めました。サーバーのみんなに知らせました。");
     }
 
     public static void list(MinecraftServer server, ServerPlayer player) {
         Party p = BY_PLAYER.get(player.getUUID());
         if (p == null) {
-            Msg.info(player, "パーティに入っていません（1人で挑戦できます）。/pd party invite <名前> で招待できます。");
+            Msg.info(player, "パーティに入っていません（1人で挑戦できます）。");
             return;
         }
         StringBuilder sb = new StringBuilder("パーティ（" + p.members.size() + "/" + PDConfig.MAX_PARTY_SIZE.get() + "）: ");
@@ -191,9 +267,6 @@ public final class PartyManager {
             sb.append(nameOf(server, id));
             if (id.equals(p.leader)) {
                 sb.append("★");
-            }
-            if (server.getPlayerList().getPlayer(id) == null) {
-                sb.append("(オフライン)");
             }
         }
         Msg.info(player, sb.toString());
@@ -208,7 +281,7 @@ public final class PartyManager {
         }
     }
 
-    private static String nameOf(MinecraftServer server, UUID id) {
+    public static String nameOf(MinecraftServer server, UUID id) {
         ServerPlayer sp = server.getPlayerList().getPlayer(id);
         if (sp != null) {
             return sp.getName().getString();

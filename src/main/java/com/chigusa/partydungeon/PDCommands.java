@@ -4,7 +4,8 @@ import com.chigusa.partydungeon.data.ClearCondition;
 import com.chigusa.partydungeon.data.DungeonDef;
 import com.chigusa.partydungeon.data.PDData;
 import com.chigusa.partydungeon.data.SpawnPoint;
-import com.chigusa.partydungeon.menu.PlayMenu;
+import com.chigusa.partydungeon.menu.Menus;
+import com.chigusa.partydungeon.npc.NpcManager;
 import com.chigusa.partydungeon.party.PartyManager;
 import com.chigusa.partydungeon.run.RunManager;
 import com.chigusa.partydungeon.util.Msg;
@@ -71,14 +72,28 @@ public final class PDCommands {
 
         // ---------------------------------------------------------- みんなが使う
         root.then(Commands.literal("help").executes(ctx -> exec(ctx, (s, p, c) -> help(p, c.getSource().hasPermission(2)))));
-        root.executes(ctx -> exec(ctx, (s, p, c) -> help(p, c.getSource().hasPermission(2))));
+        root.executes(ctx -> exec(ctx, (s, p, c) -> Menus.main(s, p)));
+        root.then(Commands.literal("menu").executes(ctx -> exec(ctx, (s, p, c) -> Menus.main(s, p))));
+        root.then(Commands.literal("lobby").executes(ctx -> exec(ctx, (s, p, c) -> Menus.lobby(s, p))));
+        root.then(Commands.literal("join").then(Commands.argument("player", EntityArgument.player())
+                .executes(ctx -> exec(ctx, (s, p, c) -> {
+                    if (PartyManager.joinRecruit(s, p, EntityArgument.getPlayer(c, "player").getUUID())) {
+                        Menus.lobby(s, p);
+                    }
+                }))));
+        root.then(Commands.literal("npc").requires(src -> src.hasPermission(2))
+                .executes(ctx -> exec(ctx, (s, p, c) -> NpcManager.spawn(p, "ダンジョン受付")))
+                .then(Commands.literal("remove").executes(ctx -> exec(ctx, (s, p, c) -> NpcManager.removeNearest(p))))
+                .then(Commands.argument("name", StringArgumentType.greedyString())
+                        .executes(ctx -> exec(ctx, (s, p, c) ->
+                                NpcManager.spawn(p, StringArgumentType.getString(c, "name"))))));
 
         root.then(Commands.literal("play").executes(ctx -> exec(ctx, (s, p, c) -> {
             if (RunManager.isInRun(p.getUUID())) {
                 Msg.warn(p, "挑戦中です。抜けるなら /pd exit");
                 return;
             }
-            PlayMenu.open(s, p, 0);
+            Menus.dungeonList(s, p, 0);
         })));
 
         root.then(Commands.literal("exit").executes(ctx -> exec(ctx, (s, p, c) -> {
@@ -93,7 +108,11 @@ public final class PDCommands {
                 .then(Commands.literal("invite").then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> exec(ctx, (s, p, c) ->
                                 PartyManager.invite(p, EntityArgument.getPlayer(c, "player"))))))
-                .then(Commands.literal("accept").executes(ctx -> exec(ctx, (s, p, c) -> PartyManager.accept(s, p))))
+                .then(Commands.literal("accept").executes(ctx -> exec(ctx, (s, p, c) -> {
+                    if (PartyManager.accept(s, p)) {
+                        Menus.lobby(s, p);
+                    }
+                })))
                 .then(Commands.literal("decline").executes(ctx -> exec(ctx, (s, p, c) -> PartyManager.decline(p))))
                 .then(Commands.literal("leave").executes(ctx -> exec(ctx, (s, p, c) -> {
                     if (PartyManager.get(p.getUUID()) == null) {
@@ -105,7 +124,7 @@ public final class PDCommands {
                 })))
                 .then(Commands.literal("kick").then(Commands.argument("player", EntityArgument.player())
                         .executes(ctx -> exec(ctx, (s, p, c) ->
-                                PartyManager.kick(s, p, EntityArgument.getPlayer(c, "player"))))))
+                                PartyManager.kick(s, p, EntityArgument.getPlayer(c, "player").getUUID())))))
                 .then(Commands.literal("list").executes(ctx -> exec(ctx, (s, p, c) -> PartyManager.list(s, p)))));
 
         // ---------------------------------------------------------- ダンジョンを作る人（OP）
@@ -306,6 +325,7 @@ public final class PDCommands {
 
     private static void help(ServerPlayer p, boolean op) {
         Msg.info(p, "―― 遊ぶ ――");
+        Msg.info(p, "P キー ／ /pd ／ 受付の村人に話しかける ： メイン画面");
         Msg.info(p, "/pd play ： ダンジョンを選んで入場（パーティ全員で入ります）");
         Msg.info(p, "/pd exit ： ダンジョンから抜ける");
         Msg.info(p, "/pd party invite <名前> ／ accept ／ decline ／ leave ／ kick <名前> ／ list");
@@ -319,6 +339,7 @@ public final class PDCommands {
         Msg.info(p, "/pd spawn add <モブ> [数] [近づいたら出る距離 0=開始時] [ボスならtrue]");
         Msg.info(p, "/pd spawn list ／ remove <番号> ／ removenear");
         Msg.info(p, "/pd clear boss|all|goal ： クリア条件");
+        Msg.info(p, "/pd npc [名前] ： 受付の村人を置く ／ /pd npc remove ： 近くの受付を消す");
         Msg.info(p, "/pd info ／ publish ／ unpublish ／ rename ／ list ／ goto <名前> ／ rooms");
     }
 
