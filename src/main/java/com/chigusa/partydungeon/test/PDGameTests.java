@@ -69,7 +69,11 @@ public final class PDGameTests {
         helper.assertTrue(d.published, "公開できていない");
 
         Level original = player.level();
-        RunManager.start(server, player, d);
+        // ハードの報酬：ダイヤ3個（100%）。ノーマルには何も入れない
+        d.rewards(com.chigusa.partydungeon.data.Difficulty.HARD).add(com.chigusa.partydungeon.data.Reward.of(
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND, 3), 100,
+                server.registryAccess()));
+        RunManager.start(server, player, d, com.chigusa.partydungeon.data.Difficulty.HARD);
         helper.assertTrue(RunManager.isInRun(id), "入場の準備が始まっていない");
 
         helper.startSequence()
@@ -83,7 +87,7 @@ public final class PDGameTests {
                 })
                 .thenWaitUntil(() -> {
                     RunManager.Run run = RunManager.runOf(id);
-                    helper.assertTrue(RunManager.aliveMobs(run).size() == 2, "ゾンビが2体出ていない " + RunManager.describeMobs(run));
+                    helper.assertTrue(RunManager.aliveMobs(run).size() == 3, "ハードでゾンビが3体（2×1.25）出ていない " + RunManager.describeMobs(run));
                 })
                 .thenExecute(() -> {
                     RunManager.Run run = RunManager.runOf(id);
@@ -94,6 +98,10 @@ public final class PDGameTests {
                     helper.assertTrue(arena.getBlockState(o).is(Blocks.STONE_BRICKS), "部屋が組み立てられていない");
                     helper.assertTrue(arena.getBlockState(o.offset(2, 1, 2)).is(Blocks.CHEST), "チェストが再現されていない");
                     List<net.minecraft.world.entity.Entity> zs = RunManager.aliveMobs(run);
+                    for (net.minecraft.world.entity.Entity z : zs) {
+                        float max = ((net.minecraft.world.entity.LivingEntity) z).getMaxHealth();
+                        helper.assertTrue(Math.abs(max - 32f) < 0.01f, "ハードの体力が32（20×1.6）になっていない: " + max);
+                    }
                     // 爆発してもブロックが壊れないこと
                     arena.explode(null, o.getX() + 8, o.getY() + 1, o.getZ() + 1, 4f, Level.ExplosionInteraction.TNT);
                     helper.assertTrue(arena.getBlockState(o.offset(8, 0, 0)).is(Blocks.STONE_BRICKS), "爆発で壁が壊れた");
@@ -103,6 +111,9 @@ public final class PDGameTests {
                 })
                 .thenWaitUntil(() -> helper.assertTrue(RunManager.runOf(id) == null, "クリア後に戻っていない"))
                 .thenExecute(() -> helper.assertTrue(player.level() == original, "元の世界に戻っていない"))
+                .thenExecute(() -> helper.assertTrue(
+                        player.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND) == 3,
+                        "報酬のダイヤ3個を受け取っていない"))
                 .thenWaitUntil(() -> {
                     boolean allFree = RunManager.rooms().stream().allMatch(RunManager.Room::isFree);
                     helper.assertTrue(allFree, "部屋の片付けが終わっていない");

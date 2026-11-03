@@ -144,6 +144,25 @@ public final class Menus {
                     leader ? pl -> dungeonList(server, pl, 0) : null);
         }
 
+        // 難易度
+        com.chigusa.partydungeon.data.Difficulty diff = party == null ? com.chigusa.partydungeon.data.Difficulty.NORMAL
+                : party.difficulty;
+        ItemStack diffIcon = icon(diff.icon, "難易度: " + diff.label, diff.color,
+                "敵の体力 ×" + diff.health + "  攻撃 ×" + diff.damage + "  数 ×" + diff.count,
+                leader ? "左クリック: 難しく  右クリック: やさしく" : "リーダーが選びます");
+        if (leader) {
+            b.button2(6, diffIcon, (pl, button) -> {
+                Party pt = PartyManager.getOrCreate(pl.getUUID());
+                pt.difficulty = button == 1 ? pt.difficulty.prev() : pt.difficulty.next();
+                refreshLobbies(server, pt);
+                if (!(pl.containerMenu instanceof ButtonMenu bm && bm.kind.equals("lobby"))) {
+                    lobby(server, pl);
+                }
+            });
+        } else {
+            b.button(6, diffIcon, null);
+        }
+
         // メンバーの顔
         List<UUID> members = party == null ? List.of(p.getUUID()) : new ArrayList<>(party.members);
         UUID leaderId = party == null ? p.getUUID() : party.leader;
@@ -215,7 +234,8 @@ public final class Menus {
                                 }
                             }
                         }
-                        RunManager.start(server, pl, d);
+                        RunManager.start(server, pl, d,
+                                pt == null ? com.chigusa.partydungeon.data.Difficulty.NORMAL : pt.difficulty);
                     });
         } else {
             b.button(40, icon(Items.CLOCK, "リーダーのスタートを待っています", ChatFormatting.GRAY), null);
@@ -462,6 +482,9 @@ public final class Menus {
                     };
                     editor(server, pl, def);
                 }));
+        b.button(23, icon(Items.CHEST, "報酬", ChatFormatting.GOLD,
+                "難易度ごとに、クリア報酬を入れます", "アイテムを入れるだけ。確率も決められます"),
+                pl -> RewardMenu.open(server, pl, id, com.chigusa.partydungeon.data.Difficulty.NORMAL));
         b.button(25, icon(Items.NAME_TAG, "名前を変える", ChatFormatting.WHITE), pl ->
                 ChatInput.ask(pl, "新しい名前を、チャットに入力してください。", name -> withDef(server, pl, id, def -> {
                     if (PDData.get(server).findByName(name) != null) {

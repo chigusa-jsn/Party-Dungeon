@@ -37,6 +37,10 @@ import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 
 /**
  * 挑戦用の部屋と、挑戦（ラン）の管理。
@@ -83,6 +87,9 @@ public final class RunManager {
     /** 1回の挑戦 */
     public static final class Run {
         public final DungeonDef def;
+        public final com.chigusa.partydungeon.data.Difficulty difficulty;
+        /** クリアしたときに決まった報酬（元の場所に戻ってから渡す） */
+        final Map<UUID, List<net.minecraft.world.item.ItemStack>> pendingRewards = new HashMap<>();
         final DungeonTemplate tpl;
         public final Room room;
         public final Set<UUID> members = new LinkedHashSet<>();
@@ -94,8 +101,9 @@ public final class RunManager {
         final Set<UUID> deadMobs = new java.util.HashSet<>();
         final Map<UUID, Entity> mobRefs = new HashMap<>();
 
-        Run(DungeonDef def, DungeonTemplate tpl, Room room) {
+        Run(DungeonDef def, com.chigusa.partydungeon.data.Difficulty difficulty, DungeonTemplate tpl, Room room) {
             this.def = def;
+            this.difficulty = difficulty;
             this.tpl = tpl;
             this.room = room;
             for (SpawnPoint sp : def.spawns) {
@@ -224,6 +232,11 @@ public final class RunManager {
     // ------------------------------------------------------------------ 開始
 
     public static void start(MinecraftServer server, ServerPlayer leader, DungeonDef stored) {
+        start(server, leader, stored, com.chigusa.partydungeon.data.Difficulty.NORMAL);
+    }
+
+    public static void start(MinecraftServer server, ServerPlayer leader, DungeonDef stored,
+            com.chigusa.partydungeon.data.Difficulty difficulty) {
         if (!PartyManager.canLead(leader.getUUID())) {
             Msg.warn(leader, "ダンジョンを選べるのはパーティのリーダーだけです。");
             return;
@@ -268,7 +281,7 @@ public final class RunManager {
             return;
         }
 
-        Run run = new Run(stored.copy(), tpl, room);
+        Run run = new Run(stored.copy(), difficulty, tpl, room);
         room.run = run;
         for (ServerPlayer p : members) {
             run.members.add(p.getUUID());
@@ -304,7 +317,7 @@ public final class RunManager {
             data.returns.put(p.getUUID(), ReturnInfo.of(p));
             p.teleportTo(arena, start.getX() + 0.5, start.getY(), start.getZ() + 0.5, p.getYRot(), 0);
             p.setGameMode(GameType.ADVENTURE);
-            Msg.ok(p, "「" + run.def.name + "」開始！ クリア条件: " + run.def.clear.label);
+            Msg.ok(p, "「" + run.def.name + "」【" + run.difficulty.label + "】開始！ クリア条件: " + run.def.clear.label);
         }
         data.setDirty();
         run.state = State.ACTIVE;
@@ -370,7 +383,8 @@ public final class RunManager {
             run.returnTick = now + delay * 20L;
             String time = Msg.formatTicks(now - run.startTick);
             for (ServerPlayer p : online) {
-                Msg.ok(p, "★ クリア！ タイム " + time + "  " + delay + " 秒後に元の場所へ戻ります。");
+                Msg.ok(p, "★ クリア！【" + run.difficulty.label + "】タイム " + time + "  " + delay + " 秒後に元の場所へ戻ります。");
+                rollRewards(server, run, p);
                 p.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1f, 1f);
             }
             // 残っている敵は片付ける
@@ -456,7 +470,8 @@ public final class RunManager {
             return;
         }
         BlockPos at = run.world(s.point.rel());
-        for (int i = 0; i < s.point.count(); i++) {
+        int count = run.difficulty.scaleCount(s.point.count());
+        for (int i = 0; i < count; i++) {
             Entity e;
             try {
                 e = type.spawn(arena, at, MobSpawnType.EVENT);
@@ -470,10 +485,80 @@ public final class RunManager {
             }
             if (e instanceof Mob mob) {
                 mob.setPersistenceRequired();
+                applyDifficulty(mob, run.difficulty);
             }
             s.mobs.add(e.getUUID());
             run.mobRefs.put(e.getUUID(), e);
             BY_MOB.put(e.getUUID(), run);
+        }
+    }
+
+    // ------------------------------------------------------------------ 難易度と報酬
+
+    private static final ResourceLocation MOD_HEALTH = ResourceLocation.fromNamespaceAndPath(PartyDungeon.MOD_ID, "difficulty_health");
+    private static final ResourceLocation MOD_DAMAGE = ResourceLocation.fromNamespaceAndPath(PartyDungeon.MOD_ID, "difficulty_damage");
+    private static final ResourceLocation MOD_SPEED = ResourceLocation.fromNamespaceAndPath(PartyDungeon.MOD_ID, "difficulty_speed");
+
+    /** 難易度に合わせて、体力・攻撃力・速さを変える */
+    static void applyDifficulty(Mob mob, com.chigusa.partydungeon.data.Difficulty d) {
+        addMultiplier(mob, Attributes.MAX_HEALTH, MOD_HEALTH, d.health - 1.0);
+        addMultiplier(mob, Attributes.ATTACK_DAMAGE, MOD_DAMAGE, d.damage - 1.0);
+        addMultiplier(mob, Attributes.MOVEMENT_SPEED, MOD_SPEED, d.speed);
+        mob.setHealth(mob.getMaxHealth());
+    }
+
+    private static void addMultiplier(Mob mob, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attr,
+            ResourceLocation id, double amount) {
+        if (Math.abs(amount) < 1e-6) {
+            return;
+        }
+        AttributeInstance inst = mob.getAttribute(attr);
+        if (inst == null) {
+            return;
+        }
+        inst.removeModifier(id);
+        inst.addPermanentModifier(new AttributeModifier(id, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+    }
+
+    /** クリアしたとき、その人が受け取る報酬をくじ引きで決める */
+    private static void rollRewards(MinecraftServer server, Run run, ServerPlayer p) {
+        List<com.chigusa.partydungeon.data.Reward> table = run.def.rewards.get(run.difficulty);
+        if (table == null || table.isEmpty()) {
+            return;
+        }
+        List<net.minecraft.world.item.ItemStack> got = new ArrayList<>();
+        for (com.chigusa.partydungeon.data.Reward r : table) {
+            if (p.getRandom().nextInt(100) < r.chance()) {
+                net.minecraft.world.item.ItemStack st = r.stack(server.registryAccess());
+                if (!st.isEmpty()) {
+                    got.add(st);
+                }
+            }
+        }
+        run.pendingRewards.put(p.getUUID(), got);
+        if (got.isEmpty()) {
+            Msg.info(p, "今回は報酬なし…");
+        } else {
+            StringBuilder sb = new StringBuilder("報酬: ");
+            for (int i = 0; i < got.size(); i++) {
+                if (i > 0) {
+                    sb.append("、");
+                }
+                sb.append(got.get(i).getHoverName().getString()).append(" ×").append(got.get(i).getCount());
+            }
+            Msg.ok(p, sb + "（戻ったときに渡します）");
+        }
+    }
+
+    private static void giveRewards(Run run, ServerPlayer p) {
+        List<net.minecraft.world.item.ItemStack> got = run.pendingRewards.remove(p.getUUID());
+        if (got == null) {
+            return;
+        }
+        for (net.minecraft.world.item.ItemStack st : got) {
+            if (!p.getInventory().add(st.copy())) {
+                p.drop(st.copy(), false);
+            }
         }
     }
 
@@ -492,6 +577,7 @@ public final class RunManager {
                 if (info != null) {
                     info.restore(p);
                 }
+                giveRewards(run, p);
                 if (!cleared && run.state != State.PREPARING) {
                     Msg.info(p, "ダンジョンが終了しました。");
                 }
@@ -540,6 +626,7 @@ public final class RunManager {
         if (info != null) {
             info.restore(p);
         }
+        giveRewards(run, p);
         Msg.info(p, "ダンジョンから抜けました。");
         for (ServerPlayer other : onlineMembers(server, run)) {
             Msg.info(other, p.getName().getString() + " さんがダンジョンから抜けました。");

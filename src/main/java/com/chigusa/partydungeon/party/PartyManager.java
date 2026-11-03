@@ -36,6 +36,8 @@ public final class PartyManager {
         /** ロビーで選んでいるダンジョン */
         @Nullable
         public String dungeonId;
+        /** ロビーで選んでいる難易度 */
+        public com.chigusa.partydungeon.data.Difficulty difficulty = com.chigusa.partydungeon.data.Difficulty.NORMAL;
         /** 仲間を募集中か */
         public boolean recruiting;
 

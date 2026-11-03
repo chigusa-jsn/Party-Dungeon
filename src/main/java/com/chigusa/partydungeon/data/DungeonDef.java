@@ -1,6 +1,7 @@
 package com.chigusa.partydungeon.data;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +33,8 @@ public final class DungeonDef {
     public int goalRadius = 2;
     public ClearCondition clear = ClearCondition.ALL;
     public final List<SpawnPoint> spawns = new ArrayList<>();
+    /** 難易度ごとの報酬 */
+    public final EnumMap<Difficulty, List<Reward>> rewards = new EnumMap<>(Difficulty.class);
     /** 公開済みか（公開すると「遊ぶ」画面に出る） */
     public boolean published;
     /** 公開した回数（ファイル更新の目印） */
@@ -44,6 +47,10 @@ public final class DungeonDef {
         this.plot = plot;
         this.size = size;
         this.height = height;
+    }
+
+    public List<Reward> rewards(Difficulty diff) {
+        return rewards.computeIfAbsent(diff, k -> new ArrayList<>());
     }
 
     /** 作業場での区画の角 */
@@ -111,6 +118,15 @@ public final class DungeonDef {
             list.add(s.save());
         }
         t.put("spawns", list);
+        CompoundTag rw = new CompoundTag();
+        rewards.forEach((diff, entries) -> {
+            ListTag l = new ListTag();
+            for (Reward r : entries) {
+                l.add(r.save());
+            }
+            rw.put(diff.id, l);
+        });
+        t.put("rewards", rw);
         t.putBoolean("published", published);
         t.putInt("revision", revision);
         return t;
@@ -130,6 +146,18 @@ public final class DungeonDef {
         ListTag list = t.getList("spawns", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
             d.spawns.add(SpawnPoint.load(list.getCompound(i)));
+        }
+        CompoundTag rw = t.getCompound("rewards");
+        for (Difficulty diff : Difficulty.values()) {
+            ListTag l = rw.getList(diff.id, Tag.TAG_COMPOUND);
+            if (l.isEmpty()) {
+                continue;
+            }
+            List<Reward> entries = new ArrayList<>();
+            for (int i = 0; i < l.size(); i++) {
+                entries.add(Reward.load(l.getCompound(i)));
+            }
+            d.rewards.put(diff, entries);
         }
         d.published = t.getBoolean("published");
         d.revision = t.getInt("revision");
