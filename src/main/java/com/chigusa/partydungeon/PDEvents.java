@@ -10,7 +10,9 @@ import net.minecraft.world.level.LevelAccessor;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.event.entity.EntityMobGriefingEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDeathEvent;
+import net.neoforged.neoforge.event.entity.living.LivingDestroyBlockEvent;
 import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -60,6 +62,19 @@ public final class PDEvents {
             if (isArena(e.getLevel())) {
                 // プレイヤーへのダメージはそのまま、ブロックだけ守る
                 e.getAffectedBlocks().clear();
+            }
+        });
+
+        // ウィザーやエンダードラゴンがブロックを壊すのも止める
+        bus.addListener((LivingDestroyBlockEvent e) -> {
+            if (isArena(e.getEntity().level())) {
+                e.setCanceled(true);
+            }
+        });
+        // エンダーマンがブロックを持ち去る等も止める
+        bus.addListener((EntityMobGriefingEvent e) -> {
+            if (e.getEntity() != null && isArena(e.getEntity().level())) {
+                e.setCanGrief(false);
             }
         });
 
