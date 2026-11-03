@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -39,3 +42,13 @@ jobs:
           name: party-dungeon-jar
           path: build/libs/*.jar
           if-no-files-found: error
+
+      - name: Publish the latest jar to the Releases page
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest build/libs/*.jar --prerelease --target "$GITHUB_SHA" \
+            --title "最新版（自動ビルド）" \
+            --notes "main ブランチの最新の自動ビルドです。テスト（実サーバーでの起動・通しプレイ）に合格したものだけがここに置かれます。"
