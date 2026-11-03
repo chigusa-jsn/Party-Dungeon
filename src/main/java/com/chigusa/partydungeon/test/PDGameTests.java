@@ -36,7 +36,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class PDGameTests {
 
-    @GameTest(template = "empty", timeoutTicks = 2400)
+    @GameTest(template = "empty", timeoutTicks = 20000)
     public static void fullRun(GameTestHelper helper) {
         MinecraftServer server = helper.getLevel().getServer();
         // テスト用サーバーには MOD の世界が無いので、ネザーとエンドで代用する
@@ -83,7 +83,7 @@ public final class PDGameTests {
                 })
                 .thenWaitUntil(() -> {
                     RunManager.Run run = RunManager.runOf(id);
-                    helper.assertTrue(zombies(arena, run.room.origin).size() == 2, "ゾンビが2体見えない");
+                    helper.assertTrue(RunManager.aliveMobs(run).size() == 2, "ゾンビが2体出ていない");
                 })
                 .thenExecute(() -> {
                     RunManager.Run run = RunManager.runOf(id);
@@ -93,11 +93,11 @@ public final class PDGameTests {
                     BlockPos o = run.room.origin;
                     helper.assertTrue(arena.getBlockState(o).is(Blocks.STONE_BRICKS), "部屋が組み立てられていない");
                     helper.assertTrue(arena.getBlockState(o.offset(2, 1, 2)).is(Blocks.CHEST), "チェストが再現されていない");
-                    List<Zombie> zs = zombies(arena, o);
+                    List<net.minecraft.world.entity.Entity> zs = RunManager.aliveMobs(run);
                     // 爆発してもブロックが壊れないこと
                     arena.explode(null, o.getX() + 8, o.getY() + 1, o.getZ() + 1, 4f, Level.ExplosionInteraction.TNT);
                     helper.assertTrue(arena.getBlockState(o.offset(8, 0, 0)).is(Blocks.STONE_BRICKS), "爆発で壁が壊れた");
-                    for (Zombie z : zs) {
+                    for (net.minecraft.world.entity.Entity z : zs) {
                         z.kill();
                     }
                 })

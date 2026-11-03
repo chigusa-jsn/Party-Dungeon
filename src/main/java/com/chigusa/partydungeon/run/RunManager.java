@@ -125,6 +125,17 @@ public final class RunManager {
 
     // ------------------------------------------------------------------ 参照
 
+    /** 挑戦中に出した敵のうち、まだ生きているもの */
+    public static List<Entity> aliveMobs(Run run) {
+        List<Entity> list = new ArrayList<>();
+        for (Entity e : run.mobRefs.values()) {
+            if (!e.isRemoved() && e.isAlive()) {
+                list.add(e);
+            }
+        }
+        return list;
+    }
+
     @Nullable
     public static Run runOf(UUID player) {
         return BY_PLAYER.get(player);
