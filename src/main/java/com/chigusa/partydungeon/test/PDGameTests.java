@@ -83,7 +83,7 @@ public final class PDGameTests {
                 })
                 .thenWaitUntil(() -> {
                     RunManager.Run run = RunManager.runOf(id);
-                    helper.assertTrue(RunManager.aliveMobs(run).size() == 2, "ゾンビが2体出ていない");
+                    helper.assertTrue(RunManager.aliveMobs(run).size() == 2, "ゾンビが2体出ていない " + RunManager.describeMobs(run));
                 })
                 .thenExecute(() -> {
                     RunManager.Run run = RunManager.runOf(id);

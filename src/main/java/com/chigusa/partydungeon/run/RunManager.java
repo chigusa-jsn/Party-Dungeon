@@ -125,6 +125,22 @@ public final class RunManager {
 
     // ------------------------------------------------------------------ 参照
 
+    /** テスト用：出した敵の状態の説明 */
+    public static String describeMobs(Run run) {
+        StringBuilder sb = new StringBuilder("refs=" + run.mobRefs.size());
+        ServerLevel arena = run.mobRefs.isEmpty() ? null
+                : (ServerLevel) run.mobRefs.values().iterator().next().level();
+        for (Map.Entry<UUID, Entity> e : run.mobRefs.entrySet()) {
+            Entity en = e.getValue();
+            sb.append(" [").append(en.getType().toShortString()).append(" removed=").append(en.getRemovalReason())
+                    .append(" alive=").append(en.isAlive()).append(" hp=")
+                    .append(en instanceof net.minecraft.world.entity.LivingEntity le ? le.getHealth() : -1)
+                    .append(" lookup=").append(arena == null ? "?" : String.valueOf(arena.getEntity(e.getKey()) != null))
+                    .append(" dead=").append(run.deadMobs.contains(e.getKey())).append("]");
+        }
+        return sb.toString();
+    }
+
     /** 挑戦中に出した敵のうち、まだ生きているもの */
     public static List<Entity> aliveMobs(Run run) {
         List<Entity> list = new ArrayList<>();
