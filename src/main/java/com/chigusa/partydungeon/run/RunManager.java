@@ -268,6 +268,7 @@ public final class RunManager {
                 spawn(arena, run, s);
             }
         }
+        PartyDungeon.LOGGER.info("[Party Dungeon] 部屋{} 「{}」開始 {}人", room.index + 1, run.def.name, online.size());
     }
 
     // ------------------------------------------------------------------ 毎tick
@@ -316,6 +317,7 @@ public final class RunManager {
             }
         }
         if (isCleared(arena, run, online)) {
+            PartyDungeon.LOGGER.info("[Party Dungeon] 部屋{} 「{}」クリア", run.room.index + 1, run.def.name);
             run.state = State.CLEARED;
             run.clearTick = now;
             int delay = PDConfig.RETURN_DELAY_SECONDS.get();
@@ -379,6 +381,7 @@ public final class RunManager {
             run.mobLastPos.put(id, e.blockPosition());
             return !e.isAlive();
         }
+        PartyDungeon.LOGGER.debug("[Party Dungeon] モブが見つからない: {}", id);
         // 見つからない：チャンクが読み込まれているのにいないなら、消えたとみなす
         BlockPos last = run.mobLastPos.get(id);
         return last != null && arena.isLoaded(last);
@@ -401,6 +404,7 @@ public final class RunManager {
                 continue;
             }
             if (e == null) {
+                PartyDungeon.LOGGER.warn("[Party Dungeon] モブを出せませんでした: {} at {}", s.point.entity(), at);
                 continue;
             }
             if (e instanceof Mob mob) {
@@ -416,6 +420,8 @@ public final class RunManager {
 
     /** 挑戦を終わらせて、全員を戻し、部屋を片付ける */
     public static void finish(MinecraftServer server, Run run, boolean cleared) {
+        PartyDungeon.LOGGER.info("[Party Dungeon] 部屋{} 「{}」終了（{}）", run.room.index + 1, run.def.name,
+                cleared ? "クリア" : "中断");
         PDData data = PDData.get(server);
         for (UUID id : run.members) {
             BY_PLAYER.remove(id);
