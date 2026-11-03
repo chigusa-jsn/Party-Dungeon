@@ -141,11 +141,34 @@ public final class RunManager {
         return sb.toString();
     }
 
+    /**
+     * 出した敵の「今の」エンティティ。チャンクの読み込み直しで別のオブジェクトに
+     * 入れ替わっていたら、探し直して覚え直す。見つからなければ null。
+     */
+    @Nullable
+    private static Entity resolve(ServerLevel arena, Run run, UUID id) {
+        Entity ref = run.mobRefs.get(id);
+        if (ref != null && !ref.isRemoved()) {
+            return ref;
+        }
+        Entity now = arena.getEntity(id);
+        if (now != null) {
+            run.mobRefs.put(id, now);
+        }
+        return now;
+    }
+
     /** 挑戦中に出した敵のうち、まだ生きているもの */
     public static List<Entity> aliveMobs(Run run) {
         List<Entity> list = new ArrayList<>();
-        for (Entity e : run.mobRefs.values()) {
-            if (!e.isRemoved() && e.isAlive()) {
+        ServerLevel arena = run.mobRefs.isEmpty() ? null
+                : (ServerLevel) run.mobRefs.values().iterator().next().level();
+        if (arena == null) {
+            return list;
+        }
+        for (UUID id : new ArrayList<>(run.mobRefs.keySet())) {
+            Entity e = resolve(arena, run, id);
+            if (e != null && e.isAlive()) {
                 list.add(e);
             }
         }
@@ -351,10 +374,8 @@ public final class RunManager {
                 p.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1f, 1f);
             }
             // 残っている敵は片付ける
-            for (Entity e : run.mobRefs.values()) {
-                if (!e.isRemoved()) {
-                    e.discard();
-                }
+            for (Entity e : aliveMobs(run)) {
+                e.discard();
             }
         }
     }
