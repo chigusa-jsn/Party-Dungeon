@@ -19,7 +19,8 @@ public final class PartyDungeon {
     public PartyDungeon(IEventBus modBus, ModContainer container) {
         container.registerConfig(ModConfig.Type.SERVER, PDConfig.SPEC);
         PDEvents.register();
-        modBus.addListener(com.chigusa.partydungeon.net.OpenMenuPayload::register);
+        modBus.addListener(com.chigusa.partydungeon.net.PDNetwork::register);
+        com.chigusa.partydungeon.registry.PDRegistry.register(modBus);
         if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT) {
             com.chigusa.partydungeon.client.PDClient.init(modBus);
         }

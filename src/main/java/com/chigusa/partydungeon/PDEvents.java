@@ -42,9 +42,6 @@ public final class PDEvents {
         });
         bus.addListener((ServerTickEvent.Post e) -> {
             RunManager.tick(e.getServer());
-            if (e.getServer().getTickCount() % 40 == 0) {
-                com.chigusa.partydungeon.workshop.WorkshopManager.tickMarkers(e.getServer());
-            }
         });
 
         // ---- ブロックの保護（挑戦用の世界では壊せない・置けない・爆発で壊れない）

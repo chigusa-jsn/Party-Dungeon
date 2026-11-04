@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "partydungeon:block/reward_marker"
+    }
+  }
+}

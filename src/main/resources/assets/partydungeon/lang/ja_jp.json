@@ -1,5 +1,13 @@
 {
   "partydungeon.name": "パーティダンジョン",
   "key.categories.partydungeon": "パーティダンジョン",
-  "key.partydungeon.menu": "メイン画面を開く"
+  "key.partydungeon.menu": "メイン画面を開く",
+  "itemGroup.partydungeon": "パーティダンジョン",
+  "block.partydungeon.start_marker": "スタートブロック",
+  "block.partydungeon.spawner_marker": "敵の出現ブロック",
+  "block.partydungeon.goal_marker": "ゴールブロック",
+  "block.partydungeon.reward_marker": "報酬チェスト",
+  "block.partydungeon.plan_room": "間取りブロック（部屋・通路）",
+  "block.partydungeon.plan_start": "間取りブロック（スタート）",
+  "item.partydungeon.plan_wand": "間取りの杖"
 }

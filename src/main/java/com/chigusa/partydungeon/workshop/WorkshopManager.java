@@ -71,12 +71,34 @@ public final class WorkshopManager {
             p.teleportTo(ws, LOBBY.getX() + 0.5, LOBBY.getY() + 1, LOBBY.getZ() + 0.5, p.getYRot(), 0);
         }
         p.setGameMode(GameType.CREATIVE);
-        Msg.ok(p, "作業場に入りました。/pd create <名前> で新しいダンジョンの区画を作れます。/pd help で使い方。");
+        giveKit(p);
+        Msg.ok(p, "作業場に入りました（製作モード）。道具を持ち物に入れました。");
+        Msg.info(p, "間取りブロックで床に間取りを描いて、間取りの杖で右クリック → 部屋が自動で建ちます。");
+        Msg.info(p, "P キー →「製作メニュー」で、ダンジョンの一覧・公開・テストプレイ。");
+    }
+
+    /** 製作用の道具を配る（持っていないものだけ） */
+    public static void giveKit(ServerPlayer p) {
+        net.minecraft.world.item.Item[] kit = {
+                com.chigusa.partydungeon.registry.PDRegistry.PLAN_WAND.get(),
+                com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM_ITEM.get(),
+                com.chigusa.partydungeon.registry.PDRegistry.PLAN_START_ITEM.get(),
+                com.chigusa.partydungeon.registry.PDRegistry.START_MARKER_ITEM.get(),
+                com.chigusa.partydungeon.registry.PDRegistry.SPAWNER_MARKER_ITEM.get(),
+                com.chigusa.partydungeon.registry.PDRegistry.GOAL_MARKER_ITEM.get(),
+                com.chigusa.partydungeon.registry.PDRegistry.REWARD_MARKER_ITEM.get()};
+        for (net.minecraft.world.item.Item item : kit) {
+            if (p.getInventory().countItem(item) == 0) {
+                int n = item == com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM_ITEM.get()
+                        || item == com.chigusa.partydungeon.registry.PDRegistry.SPAWNER_MARKER_ITEM.get() ? 64 : 1;
+                p.getInventory().add(new net.minecraft.world.item.ItemStack(item, n));
+            }
+        }
     }
 
     private static void ensureLobby(ServerLevel ws) {
-        for (int x = -2; x <= 2; x++) {
-            for (int z = -2; z <= 2; z++) {
+        for (int x = -24; x <= 24; x++) {
+            for (int z = -24; z <= 24; z++) {
                 BlockPos pos = LOBBY.offset(x, 0, z);
                 if (ws.getBlockState(pos).isAir()) {
                     ws.setBlockAndUpdate(pos, Blocks.SMOOTH_STONE.defaultBlockState());
@@ -88,6 +110,20 @@ public final class WorkshopManager {
     private static void teleportIntoPlot(ServerLevel ws, ServerPlayer p, DungeonDef d) {
         BlockPos o = d.plotOrigin();
         p.teleportTo(ws, o.getX() + d.size / 2.0, o.getY() + 1, o.getZ() + d.size / 2.0, p.getYRot(), 0);
+    }
+
+    /** 間取りを描くための広い足場へ */
+    public static void enterLobby(MinecraftServer server, ServerPlayer p) {
+        if (!isIn(p)) {
+            enter(server, p);
+        }
+        ServerLevel ws = workshop(server);
+        if (ws == null) {
+            return;
+        }
+        ensureLobby(ws);
+        p.teleportTo(ws, LOBBY.getX() + 0.5, LOBBY.getY() + 1, LOBBY.getZ() + 0.5, p.getYRot(), 0);
+        Msg.info(p, "ここが設計スペースです。間取りブロックで床に間取りを描いて、間取りの杖で右クリックしてください。");
     }
 
     /** /pd exit（作業場から出る） */
@@ -137,12 +173,14 @@ public final class WorkshopManager {
         Msg.info(p, "「" + name + "」の区画（" + size + "×" + size + "、高さ" + height + "）を建てています…");
         BlockJobs.add(BlockJobs.frame(ws, d.plotOrigin(), size, height, wall, () -> {
             ServerPlayer now = server.getPlayerList().getPlayer(p.getUUID());
+            ws.setBlockAndUpdate(d.plotOrigin().offset(d.start),
+                    com.chigusa.partydungeon.registry.PDRegistry.START_MARKER.get().defaultBlockState());
             if (now != null) {
                 teleportIntoPlot(ws, now, d);
                 now.setGameMode(GameType.CREATIVE);
                 Msg.ok(now, "外枠ができました！ 中を自由に建築してください。");
-                Msg.info(now, "スタート地点は中央にしてあります。変えるなら立って /pd setstart");
-                Msg.info(now, "敵は /pd spawn add <モブ> 、終わったら /pd publish で公開");
+                Msg.info(now, "スタートブロック（緑）は中央に置いてあります。動かしたければ壊して置き直してください。");
+                Msg.info(now, "敵ブロック・ゴールブロックを置いて右クリックで設定 → P キー「製作メニュー」で公開");
             }
         }));
     }
@@ -167,13 +205,15 @@ public final class WorkshopManager {
 
     /** /pd publish：今の建物を設計図にして公開する */
     public static void publish(MinecraftServer server, ServerPlayer p, DungeonDef d) {
+        ServerLevel ws = workshop(server);
+        java.util.List<DungeonTemplate.Marker> markers = new java.util.ArrayList<>();
+        DungeonTemplate tpl = DungeonTemplate.capture(ws, d.plotOrigin(), d.size, d.height, d.size, markers);
+        applyMarkers(p, d, markers);
         String problem = d.validate();
         if (problem != null) {
             Msg.warn(p, "公開できません: " + problem);
             return;
         }
-        ServerLevel ws = workshop(server);
-        DungeonTemplate tpl = DungeonTemplate.capture(ws, d.plotOrigin(), d.size, d.height, d.size);
         try {
             tpl.save(server, d.id);
         } catch (IOException e) {
@@ -186,6 +226,48 @@ public final class WorkshopManager {
         PDData.get(server).setDirty();
         Msg.ok(p, "「" + d.name + "」を公開しました！（第" + d.revision + "版） /pd play から遊べます。");
         Msg.info(p, "建物を直したら、もう一度 /pd publish すると反映されます。");
+    }
+
+    /** 置いた目印ブロックから、スタート・敵・ゴールを決める */
+    private static void applyMarkers(ServerPlayer p, DungeonDef d, java.util.List<DungeonTemplate.Marker> markers) {
+        d.spawns.clear();
+        boolean start = false;
+        boolean goal = false;
+        int unset = 0;
+        for (DungeonTemplate.Marker m : markers) {
+            if (m.block() == com.chigusa.partydungeon.registry.PDRegistry.START_MARKER.get()) {
+                if (start) {
+                    Msg.warn(p, "スタートブロックが2つ以上あります。1つ目を使います。");
+                    continue;
+                }
+                d.start = m.rel();
+                start = true;
+            } else if (m.block() == com.chigusa.partydungeon.registry.PDRegistry.GOAL_MARKER.get()) {
+                d.goal = m.rel();
+                d.goalRadius = m.data() != null && m.data().contains("radius") ? m.data().getInt("radius") : 2;
+                goal = true;
+            } else if (m.block() == com.chigusa.partydungeon.registry.PDRegistry.SPAWNER_MARKER.get()) {
+                net.minecraft.nbt.CompoundTag t = m.data();
+                net.minecraft.resources.ResourceLocation id = t == null || !t.contains("entity") ? null
+                        : net.minecraft.resources.ResourceLocation.tryParse(t.getString("entity"));
+                if (id == null) {
+                    unset++;
+                    continue;
+                }
+                d.spawns.add(new SpawnPoint(m.rel(), id, Math.max(1, t.getInt("count")), Math.max(0, t.getInt("radius")),
+                        t.getBoolean("boss")));
+            }
+        }
+        if (!goal) {
+            d.goal = null;
+        }
+        if (unset > 0) {
+            Msg.warn(p, "モブが選ばれていない敵ブロックが " + unset + " 個あります（その分は出ません）。右クリックで選んでください。");
+        }
+        if (!start) {
+            Msg.info(p, "スタートブロックが無いので、床の中央からスタートします。");
+            d.start = new BlockPos(d.size / 2, 1, d.size / 2);
+        }
     }
 
     /** 作業場にいる人に、目印をパーティクルで見せる（2秒ごと） */

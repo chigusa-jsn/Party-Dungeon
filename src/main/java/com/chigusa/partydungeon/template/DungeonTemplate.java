@@ -66,8 +66,18 @@ public final class DungeonTemplate {
         return new BlockPos(x, y, z);
     }
 
+    /** 読み取った目印ブロック1つ */
+    public record Marker(BlockPos rel, net.minecraft.world.level.block.Block block, @Nullable CompoundTag data) {
+    }
+
     /** 作業場の範囲を読み取って設計図を作る */
     public static DungeonTemplate capture(ServerLevel level, BlockPos origin, int sizeX, int sizeY, int sizeZ) {
+        return capture(level, origin, sizeX, sizeY, sizeZ, new ArrayList<>());
+    }
+
+    /** 目印ブロックは空気にして、markers に集める */
+    public static DungeonTemplate capture(ServerLevel level, BlockPos origin, int sizeX, int sizeY, int sizeZ,
+            List<Marker> markers) {
         List<BlockState> palette = new ArrayList<>();
         Map<BlockState, Integer> lookup = new HashMap<>();
         palette.add(Blocks.AIR.defaultBlockState());
@@ -82,6 +92,12 @@ public final class DungeonTemplate {
                 for (int x = 0; x < sizeX; x++) {
                     m.set(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
                     BlockState state = level.getBlockState(m);
+                    if (com.chigusa.partydungeon.registry.PDRegistry.isMarker(state.getBlock())) {
+                        BlockEntity mbe = level.getBlockEntity(m);
+                        markers.add(new Marker(new BlockPos(x, y, z), state.getBlock(),
+                                mbe == null ? null : mbe.saveWithoutMetadata(level.registryAccess())));
+                        state = Blocks.AIR.defaultBlockState();
+                    }
                     Integer idx = lookup.get(state);
                     if (idx == null) {
                         idx = palette.size();

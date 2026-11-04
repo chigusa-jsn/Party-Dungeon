@@ -54,19 +54,27 @@ public final class PDGameTests {
         // 区画を作る
         PDData data = PDData.get(server);
         DungeonDef d = new DungeonDef("test1", "テスト", id, 900, 16, 8);
-        d.start = new BlockPos(8, 1, 8);
         d.clear = ClearCondition.ALL;
-        d.spawns.add(new SpawnPoint(new BlockPos(4, 1, 4), ResourceLocation.withDefaultNamespace("zombie"), 2, 0, false));
         data.dungeons.put(d.id, d);
         BlockJobs.runNow(BlockJobs.frame(ws, d.plotOrigin(), 16, 8, Blocks.STONE_BRICKS.defaultBlockState(), null));
         helper.assertTrue(ws.getBlockState(d.plotOrigin()).is(Blocks.STONE_BRICKS), "外枠の床ができていない");
         helper.assertTrue(ws.getBlockState(d.plotOrigin().offset(5, 3, 5)).isAir(), "外枠の中が空気になっていない");
         helper.assertTrue(ws.getBlockState(d.plotOrigin().offset(5, 7, 5)).is(Blocks.STONE_BRICKS), "天井ができていない");
 
-        // 目印のブロック（チェスト）を置いて公開
+        // 普通のブロック（チェスト）と、目印ブロック（スタート・敵）を置いて公開
         ws.setBlockAndUpdate(d.plotOrigin().offset(2, 1, 2), Blocks.CHEST.defaultBlockState());
+        ws.setBlockAndUpdate(d.plotOrigin().offset(8, 1, 8),
+                com.chigusa.partydungeon.registry.PDRegistry.START_MARKER.get().defaultBlockState());
+        BlockPos spawnerPos = d.plotOrigin().offset(4, 1, 4);
+        ws.setBlockAndUpdate(spawnerPos, com.chigusa.partydungeon.registry.PDRegistry.SPAWNER_MARKER.get().defaultBlockState());
+        net.minecraft.nbt.CompoundTag sd = new net.minecraft.nbt.CompoundTag();
+        sd.putString("entity", "minecraft:zombie");
+        sd.putInt("count", 2);
+        ((com.chigusa.partydungeon.block.SpawnerMarkerBlockEntity) ws.getBlockEntity(spawnerPos)).loadData(sd);
         WorkshopManager.publish(server, player, d);
         helper.assertTrue(d.published, "公開できていない");
+        helper.assertTrue(new BlockPos(8, 1, 8).equals(d.start), "スタートブロックの位置が読めていない: " + d.start);
+        helper.assertTrue(d.spawns.size() == 1 && d.spawns.get(0).count() == 2, "敵ブロックが読めていない: " + d.spawns);
 
         Level original = player.level();
         // ハードの報酬：ダイヤ3個（100%）。ノーマルには何も入れない
@@ -97,6 +105,8 @@ public final class PDGameTests {
                     BlockPos o = run.room.origin;
                     helper.assertTrue(arena.getBlockState(o).is(Blocks.STONE_BRICKS), "部屋が組み立てられていない");
                     helper.assertTrue(arena.getBlockState(o.offset(2, 1, 2)).is(Blocks.CHEST), "チェストが再現されていない");
+                    helper.assertTrue(arena.getBlockState(o.offset(4, 1, 4)).isAir(), "敵ブロックが部屋に残っている");
+                    helper.assertTrue(arena.getBlockState(o.offset(8, 1, 8)).isAir(), "スタートブロックが部屋に残っている");
                     List<net.minecraft.world.entity.Entity> zs = RunManager.aliveMobs(run);
                     for (net.minecraft.world.entity.Entity z : zs) {
                         float max = ((net.minecraft.world.entity.LivingEntity) z).getMaxHealth();
@@ -122,6 +132,61 @@ public final class PDGameTests {
                         "部屋がリセットされていない"))
                 .thenExecute(() -> {
                     data.dungeons.remove(d.id);
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
+    /** 間取りから部屋と通路が建つか */
+    @GameTest(template = "empty", timeoutTicks = 20000)
+    public static void planBuild(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        PDDimensions.ARENA = Level.NETHER;
+        PDDimensions.WORKSHOP = Level.END;
+        ServerLevel ws = server.getLevel(PDDimensions.WORKSHOP);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        // 間取り（E = 床の外）:  RR...RR   ← 2×2の部屋、3マスの通路、2×2の部屋
+        //                       RR CCC RR      左上をスタートに
+        BlockPos base = new BlockPos(5000, 64, 5000);
+        net.minecraft.world.level.block.state.BlockState room =
+                com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM.get().defaultBlockState();
+        for (int x = 0; x < 7; x++) {
+            for (int z = 0; z < 2; z++) {
+                boolean corridor = x >= 2 && x <= 4;
+                if (corridor && z == 0) {
+                    continue;
+                }
+                ws.setBlockAndUpdate(base.offset(x, 0, z), room);
+            }
+        }
+        ws.setBlockAndUpdate(base, com.chigusa.partydungeon.registry.PDRegistry.PLAN_START.get().defaultBlockState());
+        com.chigusa.partydungeon.workshop.PlanBuilder.Plan plan =
+                com.chigusa.partydungeon.workshop.PlanBuilder.read(ws, base.offset(3, 0, 1));
+        helper.assertTrue(plan != null && plan.w() == 7 && plan.h() == 2 && plan.cellCount() == 11,
+                "間取りの読み取りがおかしい: " + (plan == null ? null : plan.w() + "x" + plan.h() + " " + plan.cellCount()));
+        helper.assertTrue(plan.start() != null && plan.start()[0] == 0 && plan.start()[1] == 0, "スタートの位置がおかしい");
+        com.chigusa.partydungeon.workshop.PlanBuilder.build(server, player, plan, "間取りテスト", 8, 3, 7,
+                Blocks.STONE_BRICKS.defaultBlockState());
+        DungeonDef d = PDData.get(server).findByName("間取りテスト");
+        helper.assertTrue(d != null && d.size == 7 * 8 + 2, "ダンジョンが作られていない");
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(!BlockJobs.isBusy(), "建築中"))
+                .thenExecute(() -> {
+                    BlockPos o = d.plotOrigin();
+                    // 左の部屋（16×16 の床）の中ほど：床があって、上は空気
+                    helper.assertTrue(ws.getBlockState(o.offset(1 + 8, 0, 1 + 8)).is(Blocks.STONE_BRICKS), "部屋の床がない");
+                    helper.assertTrue(ws.getBlockState(o.offset(1 + 8, 3, 1 + 8)).isAir(), "部屋の中が空気でない");
+                    // 通路（2行目の真ん中、幅3）：中央は空気、通路の横は壁
+                    int cz = 1 + 8 + 4; // 2行目のマスの中央
+                    helper.assertTrue(ws.getBlockState(o.offset(1 + 3 * 8 + 4, 2, cz)).isAir(), "通路が通っていない");
+                    helper.assertTrue(ws.getBlockState(o.offset(1 + 3 * 8 + 4, 2, cz - 2)).is(Blocks.STONE_BRICKS),
+                            "通路の横に壁がない");
+                    // 1行目の通路の場所（何も描いていない）は、通路の壁の外なので空気
+                    helper.assertTrue(ws.getBlockState(o.offset(1 + 3 * 8 + 4, 2, 1 + 2)).isAir(), "描いていない所に何かある");
+                    // スタートブロック
+                    helper.assertTrue(ws.getBlockState(o.offset(d.start)).is(
+                            com.chigusa.partydungeon.registry.PDRegistry.START_MARKER.get()), "スタートブロックがない");
+                    PDData.get(server).dungeons.remove(d.id);
                     player.discard();
                 })
                 .thenSucceed();

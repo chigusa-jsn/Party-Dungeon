@@ -165,38 +165,6 @@ public final class PDCommands {
         }
         root.then(clear);
 
-        root.then(Commands.literal("spawn").requires(src -> src.hasPermission(2))
-                .then(Commands.literal("add")
-                        .then(Commands.argument("entity", ResourceArgument.resource(build, Registries.ENTITY_TYPE))
-                                .executes(ctx -> addSpawn(ctx, 1, 0, false))
-                                .then(Commands.argument("count", IntegerArgumentType.integer(1, 64))
-                                        .executes(ctx -> addSpawn(ctx, IntegerArgumentType.getInteger(ctx, "count"), 0, false))
-                                        .then(Commands.argument("radius", IntegerArgumentType.integer(0, 128))
-                                                .executes(ctx -> addSpawn(ctx, IntegerArgumentType.getInteger(ctx, "count"),
-                                                        IntegerArgumentType.getInteger(ctx, "radius"), false))
-                                                .then(Commands.argument("boss", BoolArgumentType.bool())
-                                                        .executes(ctx -> addSpawn(ctx,
-                                                                IntegerArgumentType.getInteger(ctx, "count"),
-                                                                IntegerArgumentType.getInteger(ctx, "radius"),
-                                                                BoolArgumentType.getBool(ctx, "boss"))))))))
-                .then(Commands.literal("list").executes(ctx -> plot(ctx, (s, p, d, c) -> listSpawns(p, d))))
-                .then(Commands.literal("remove").then(Commands.argument("number", IntegerArgumentType.integer(1))
-                        .executes(ctx -> plot(ctx, (s, p, d, c) -> {
-                            int n = IntegerArgumentType.getInteger(c, "number");
-                            if (n > d.spawns.size()) {
-                                Msg.warn(p, n + " 番の敵はありません。/pd spawn list で番号を確認してください。");
-                                return;
-                            }
-                            SpawnPoint removed = d.spawns.remove(n - 1);
-                            Msg.ok(p, n + " 番（" + removed.entity() + "）を消しました。");
-                        }))))
-                .then(Commands.literal("removenear").executes(ctx -> plot(ctx, (s, p, d, c) -> {
-                    BlockPos here = WorkshopManager.relPos(d, p);
-                    int before = d.spawns.size();
-                    d.spawns.removeIf(sp -> sp.rel().distSqr(here) <= 4);
-                    Msg.ok(p, "近くの敵を " + (before - d.spawns.size()) + " 個消しました。");
-                }))));
-
         root.then(Commands.literal("info").requires(src -> src.hasPermission(2))
                 .executes(ctx -> plot(ctx, (s, p, d, c) -> info(p, d))));
 
@@ -336,8 +304,7 @@ public final class PDCommands {
         Msg.info(p, "/pd workshop ： 作業場へ（クリエイティブ）。/pd exit で元の場所へ");
         Msg.info(p, "/pd create \"名前\" [広さ16-128] [高さ8-96] [壁のブロック] ： 外枠を自動建築");
         Msg.info(p, "/pd setstart ／ /pd setgoal [半径] ： 立っている場所をスタート／ゴールに");
-        Msg.info(p, "/pd spawn add <モブ> [数] [近づいたら出る距離 0=開始時] [ボスならtrue]");
-        Msg.info(p, "/pd spawn list ／ remove <番号> ／ removenear");
+        Msg.info(p, "敵・ゴール・スタートは、専用ブロックを置いて右クリックで設定します");
         Msg.info(p, "/pd clear boss|all|goal ： クリア条件");
         Msg.info(p, "/pd npc [名前] ： 受付の村人を置く ／ /pd npc remove ： 近くの受付を消す");
         Msg.info(p, "/pd info ／ publish ／ unpublish ／ rename ／ list ／ goto <名前> ／ rooms");

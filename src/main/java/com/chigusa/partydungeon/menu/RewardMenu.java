@@ -124,7 +124,7 @@ public final class RewardMenu extends AbstractContainerMenu {
         container.setItem(CHANCE_SLOT, Menus.icon(Items.RABBIT_FOOT, "確率の設定", ChatFormatting.AQUA,
                 "アイテムごとに、出る確率を決めます", "（最初は 100%）"));
         container.setItem(52, Menus.icon(Items.GRAY_STAINED_GLASS_PANE, " ", ChatFormatting.DARK_GRAY));
-        container.setItem(BACK_SLOT, Menus.icon(Items.SPRUCE_DOOR, "保存して戻る", ChatFormatting.GRAY));
+        container.setItem(BACK_SLOT, Menus.icon(Items.SPRUCE_DOOR, "保存して製作メニューへ", ChatFormatting.GRAY));
         if (ready) {
             broadcastChanges();
         }
@@ -162,12 +162,8 @@ public final class RewardMenu extends AbstractContainerMenu {
                     return;
                 } else if (slotId == BACK_SLOT) {
                     save();
-                    DungeonDef def = def();
-                    if (def != null) {
-                        Menus.editor(server, sp, def);
-                    } else {
-                        sp.closeContainer();
-                    }
+                    sp.closeContainer();
+                    com.chigusa.partydungeon.net.ScreenActions.openManager(server, sp, defId);
                     return;
                 }
             }

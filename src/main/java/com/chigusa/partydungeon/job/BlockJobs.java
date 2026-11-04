@@ -147,7 +147,27 @@ public final class BlockJobs {
             @Override
             BlockState stateAt(int index, int x, int y, int z) {
                 boolean edge = y == 0 || y == height - 1 || x == 0 || x == size - 1 || z == 0 || z == size - 1;
+                // 天井に明かりを並べる（6ブロックおき）
+                if (y == height - 1 && x % 6 == 3 && z % 6 == 3 && x < size - 1 && z < size - 1) {
+                    return Blocks.SEA_LANTERN.defaultBlockState();
+                }
                 return edge ? wall : Blocks.AIR.defaultBlockState();
+            }
+        };
+    }
+
+    /** 位置ごとに置くブロックを決める関数 */
+    @FunctionalInterface
+    public interface StateFn {
+        BlockState at(int x, int y, int z);
+    }
+
+    /** 自由な形で建てる（間取りからの自動建築） */
+    public static Job custom(ServerLevel level, BlockPos origin, int sx, int sy, int sz, StateFn fn, Runnable done) {
+        return new BoxJob(level, origin, sx, sy, sz, done) {
+            @Override
+            BlockState stateAt(int index, int x, int y, int z) {
+                return fn.at(x, y, z);
             }
         };
     }

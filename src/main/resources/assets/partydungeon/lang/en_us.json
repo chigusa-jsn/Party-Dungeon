@@ -1,5 +1,13 @@
 {
   "partydungeon.name": "Party Dungeon",
   "key.categories.partydungeon": "Party Dungeon",
-  "key.partydungeon.menu": "Open menu"
+  "key.partydungeon.menu": "Open menu",
+  "itemGroup.partydungeon": "Party Dungeon",
+  "block.partydungeon.start_marker": "Start Marker",
+  "block.partydungeon.spawner_marker": "Mob Spawn Marker",
+  "block.partydungeon.goal_marker": "Goal Marker",
+  "block.partydungeon.reward_marker": "Reward Chest",
+  "block.partydungeon.plan_room": "Plan Block (Room/Corridor)",
+  "block.partydungeon.plan_start": "Plan Block (Start)",
+  "item.partydungeon.plan_wand": "Plan Wand"
 }
