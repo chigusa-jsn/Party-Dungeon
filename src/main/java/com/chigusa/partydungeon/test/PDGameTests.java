@@ -177,9 +177,10 @@ public final class PDGameTests {
                     helper.assertTrue(ws.getBlockState(o.offset(1 + 8, 0, 1 + 8)).is(Blocks.STONE_BRICKS), "部屋の床がない");
                     helper.assertTrue(ws.getBlockState(o.offset(1 + 8, 3, 1 + 8)).isAir(), "部屋の中が空気でない");
                     // 通路（2行目の真ん中、幅3）：中央は空気、通路の横は壁
-                    int cz = 1 + 8 + 4; // 2行目のマスの中央
+                    int cz = 1 + 8 + 3; // 2行目のマスの中央（幅3の通路は 2〜4 番目）
                     helper.assertTrue(ws.getBlockState(o.offset(1 + 3 * 8 + 4, 2, cz)).isAir(), "通路が通っていない");
-                    helper.assertTrue(ws.getBlockState(o.offset(1 + 3 * 8 + 4, 2, cz - 2)).is(Blocks.STONE_BRICKS),
+                    helper.assertTrue(ws.getBlockState(o.offset(1 + 3 * 8 + 4, 2, cz - 2)).is(Blocks.STONE_BRICKS)
+                            && ws.getBlockState(o.offset(1 + 3 * 8 + 4, 2, cz + 2)).is(Blocks.STONE_BRICKS),
                             "通路の横に壁がない");
                     // 1行目の通路の場所（何も描いていない）は、通路の壁の外なので空気
                     helper.assertTrue(ws.getBlockState(o.offset(1 + 3 * 8 + 4, 2, 1 + 2)).isAir(), "描いていない所に何かある");
