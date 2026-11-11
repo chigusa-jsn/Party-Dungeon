@@ -273,8 +273,9 @@ public final class PDGameTests {
                             && b != null && b.state == RunManager.State.ACTIVE, "まだ開始していない");
                 })
                 .thenExecute(() -> {
-                    normal.kill();
-                    chaos.kill();
+                    // テスト用の偽プレイヤーは「移動中」のままダメージを受けないので、直接倒す
+                    normal.die(normal.damageSources().genericKill());
+                    chaos.die(chaos.damageSources().genericKill());
                     helper.assertTrue(!RunManager.isInRun(normal.getUUID()) && !RunManager.isInRun(chaos.getUUID()),
                             "死んだのに挑戦から抜けていない");
                     // 復活（テストでは手で呼ぶ）
