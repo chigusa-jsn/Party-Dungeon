@@ -216,8 +216,8 @@ public class ManagerScreen extends PDScreen {
             button("作る", x, y + 84, 96, 20, b -> {
                 CompoundTag t = new CompoundTag();
                 t.putString("name", name.getValue());
-                t.putInt("size", parse(size, 48, 16, 240));
-                t.putInt("height", parse(heightBox, 24, 8, 96));
+                t.putInt("size", parse(size, 48, 16, 512));
+                t.putInt("height", parse(heightBox, 24, 8, 160));
                 PDNetwork.sendAction("manager", "create", t);
                 onClose();
             });
@@ -233,9 +233,9 @@ public class ManagerScreen extends PDScreen {
             g.drawCenteredString(font, title, width / 2, y - 24, GOLD);
             text(g, "名前", x, y + 5, WHITE);
             text(g, "広さ", x, y + 31, WHITE);
-            text(g, "16〜240", x + 126, y + 31, GRAY);
+            text(g, "16〜512", x + 126, y + 31, GRAY);
             text(g, "高さ", x, y + 57, WHITE);
-            text(g, "8〜96", x + 126, y + 57, GRAY);
+            text(g, "8〜160", x + 126, y + 57, GRAY);
         }
     }
 }

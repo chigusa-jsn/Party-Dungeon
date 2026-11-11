@@ -193,6 +193,51 @@ public final class PDGameTests {
                 .thenSucceed();
     }
 
+    /** ボス部屋（紫）が円形・高さ20で建ち、通路とつながるか */
+    @GameTest(template = "empty", timeoutTicks = 20000)
+    public static void planBoss(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        PDDimensions.ARENA = Level.NETHER;
+        PDDimensions.WORKSHOP = Level.END;
+        ServerLevel ws = server.getLevel(PDDimensions.WORKSHOP);
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        // 赤(スタート) 白 白 紫紫紫 ← 紫は 3×3
+        BlockPos base = new BlockPos(7000, 64, 7000);
+        ws.setBlockAndUpdate(base.offset(0, 0, 1), com.chigusa.partydungeon.registry.PDRegistry.PLAN_START.get().defaultBlockState());
+        ws.setBlockAndUpdate(base.offset(1, 0, 1), com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM.get().defaultBlockState());
+        ws.setBlockAndUpdate(base.offset(2, 0, 1), com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM.get().defaultBlockState());
+        for (int x = 3; x < 6; x++) {
+            for (int z = 0; z < 3; z++) {
+                ws.setBlockAndUpdate(base.offset(x, 0, z), com.chigusa.partydungeon.registry.PDRegistry.PLAN_BOSS.get().defaultBlockState());
+            }
+        }
+        com.chigusa.partydungeon.workshop.PlanBuilder.Plan plan =
+                com.chigusa.partydungeon.workshop.PlanBuilder.read(ws, base.offset(4, 0, 1));
+        helper.assertTrue(plan != null && plan.hasBoss() && plan.cellCount() == 12, "ボスの間取りが読めない");
+        com.chigusa.partydungeon.workshop.PlanBuilder.build(server, player, plan, "ボステスト", 8, 3, 7,
+                Blocks.STONE_BRICKS.defaultBlockState());
+        DungeonDef d = PDData.get(server).findByName("ボステスト");
+        helper.assertTrue(d != null && d.height == 20, "ボス部屋の高さが20になっていない");
+        helper.startSequence()
+                .thenWaitUntil(() -> helper.assertTrue(!BlockJobs.isBusy(), "建築中"))
+                .thenExecute(() -> {
+                    BlockPos o = d.plotOrigin();
+                    // ボス部屋の中心（マス 3〜5 → ブロック 24〜47、中心 36）
+                    BlockPos c = o.offset(1 + 36, 0, 1 + 12);
+                    helper.assertTrue(ws.getBlockState(c).is(Blocks.CHISELED_STONE_BRICKS), "ボス部屋の床がない");
+                    helper.assertTrue(ws.getBlockState(c.above(15)).isAir(), "ボス部屋が高さ20になっていない");
+                    helper.assertTrue(!ws.getBlockState(c.above(19)).isAir(), "ボス部屋の天井がない");
+                    // 角（円の外）は床ではない
+                    helper.assertTrue(!ws.getBlockState(o.offset(1 + 24, 0, 1)).is(Blocks.CHISELED_STONE_BRICKS),
+                            "四角いまま（円になっていない）");
+                    // 白の通路 → ボス部屋の入口がふさがっていない（境目のすぐ内側）
+                    helper.assertTrue(ws.getBlockState(o.offset(1 + 24, 2, 1 + 8 + 3)).isAir(), "ボス部屋の入口がない");
+                    PDData.get(server).dungeons.remove(d.id);
+                    player.discard();
+                })
+                .thenSucceed();
+    }
+
     private static List<Zombie> zombies(ServerLevel arena, BlockPos o) {
         return arena.getEntitiesOfClass(Zombie.class, new AABB(o.getX(), o.getY(), o.getZ(),
                 o.getX() + 16, o.getY() + 8, o.getZ() + 16), z -> z.isAlive());

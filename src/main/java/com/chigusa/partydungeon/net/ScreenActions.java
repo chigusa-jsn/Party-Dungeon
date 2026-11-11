@@ -130,7 +130,7 @@ public final class ScreenActions {
                 p.closeContainer();
                 WorkshopManager.create(server, p, data.getString("name").trim(),
                         Math.max(16, Math.min(PlanBuilder.MAX_SIZE, data.getInt("size"))),
-                        Math.max(8, Math.min(96, data.getInt("height"))), Blocks.STONE_BRICKS.defaultBlockState());
+                        Math.max(8, Math.min(PlanBuilder.MAX_HEIGHT, data.getInt("height"))), Blocks.STONE_BRICKS.defaultBlockState());
             }
             default -> {
                 if (d == null) {

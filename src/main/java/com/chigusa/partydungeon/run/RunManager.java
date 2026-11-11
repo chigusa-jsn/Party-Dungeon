@@ -657,14 +657,42 @@ public final class RunManager {
     }
 
     /** ダンジョン内で死んだ：持ち物を預かる（落とさない） */
+    /**
+     * ダンジョン内で死んだ：その人は挑戦から抜け、復活すると元の場所に戻る。
+     * 持ち物は残る（カオスは設定により全ロス）。
+     */
     public static void onPlayerDeath(ServerPlayer p) {
-        if (!isInRun(p.getUUID()) || !PDConfig.KEEP_INVENTORY.get()) {
+        Run run = BY_PLAYER.get(p.getUUID());
+        if (run == null) {
             return;
         }
-        SAVED_INV.put(p.getUUID(), p.getInventory().save(new net.minecraft.nbt.ListTag()));
-        SAVED_XP.put(p.getUUID(), new int[] {p.experienceLevel, p.totalExperience});
-        SAVED_XP_PROGRESS.put(p.getUUID(), p.experienceProgress);
-        p.getInventory().clearContent();
+        MinecraftServer server = p.server;
+        boolean lose = run.difficulty == com.chigusa.partydungeon.data.Difficulty.CHAOS
+                && PDConfig.CHAOS_LOSES_ITEMS.get();
+        if (lose) {
+            // 全ロス：何も落とさず消える
+            p.getInventory().clearContent();
+            p.experienceLevel = 0;
+            p.totalExperience = 0;
+            p.experienceProgress = 0f;
+            Msg.warn(p, "カオスで倒れたため、持ち物と経験値をすべて失いました…");
+        } else if (PDConfig.KEEP_INVENTORY.get()) {
+            SAVED_INV.put(p.getUUID(), p.getInventory().save(new net.minecraft.nbt.ListTag()));
+            SAVED_XP.put(p.getUUID(), new int[] {p.experienceLevel, p.totalExperience});
+            SAVED_XP_PROGRESS.put(p.getUUID(), p.experienceProgress);
+            p.getInventory().clearContent();
+        }
+        // 挑戦から外す（戻り先は残しておき、復活したときに戻す）
+        BY_PLAYER.remove(p.getUUID());
+        run.members.remove(p.getUUID());
+        run.pendingRewards.remove(p.getUUID());
+        for (ServerPlayer other : onlineMembers(server, run)) {
+            Msg.info(other, p.getName().getString() + " さんが倒れました。（残り " + run.members.size() + " 人）");
+        }
+        if (run.members.isEmpty() && run.state != State.PREPARING) {
+            Msg.info(p, "全員が倒れたので、ダンジョンは終了です。");
+            finish(server, run, false);
+        }
     }
 
     public static boolean keepsExperience(UUID id) {
@@ -687,16 +715,19 @@ public final class RunManager {
     }
 
     /** 復活したらスタート地点へ */
+    /** 復活したら元の場所（現世）へ */
     public static void onRespawn(MinecraftServer server, ServerPlayer p) {
-        Run run = BY_PLAYER.get(p.getUUID());
-        if (run == null || run.state == State.PREPARING) {
+        if (isInRun(p.getUUID())) {
             return;
         }
-        ServerLevel arena = arena(server);
-        BlockPos start = run.world(run.def.start);
-        p.teleportTo(arena, start.getX() + 0.5, start.getY(), start.getZ() + 0.5, p.getYRot(), 0);
-        p.setGameMode(GameType.ADVENTURE);
-        Msg.info(p, "スタート地点から再開します。");
+        PDData data = PDData.get(server);
+        ReturnInfo info = data.returns.remove(p.getUUID());
+        if (info == null) {
+            return;
+        }
+        data.setDirty();
+        info.restore(p);
+        Msg.info(p, "ダンジョンで倒れたので、元の場所に戻りました。");
     }
 
     public static void onLogout(MinecraftServer server, ServerPlayer p) {

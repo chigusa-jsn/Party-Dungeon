@@ -25,7 +25,7 @@ public class PlanWandItem extends Item {
             }
             PlanBuilder.Plan plan = PlanBuilder.read(level, ctx.getClickedPos());
             if (plan == null) {
-                Msg.warn(sp, "間取りブロック（白か赤）を右クリックしてください。");
+                Msg.warn(sp, "間取りブロック（白・赤・紫）を右クリックしてください。");
                 return InteractionResult.FAIL;
             }
             CompoundTag t = new CompoundTag();
@@ -34,6 +34,7 @@ public class PlanWandItem extends Item {
             t.putInt("h", plan.h());
             t.putInt("cells", plan.cellCount());
             t.putBoolean("hasStart", plan.start() != null);
+            t.putBoolean("hasBoss", plan.hasBoss());
             t.putInt("maxSize", PlanBuilder.MAX_SIZE);
             PDNetwork.openScreen(sp, "plan", t);
         }

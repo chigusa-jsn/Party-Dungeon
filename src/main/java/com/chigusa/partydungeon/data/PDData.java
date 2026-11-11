@@ -39,6 +39,16 @@ public final class PDData extends SavedData {
                 new SavedData.Factory<>(PDData::new, PDData::load, null), NAME);
     }
 
+    /** 新しい区画の番号を確保する。大きいダンジョンは隣の区画もまとめて使う */
+    public int allocatePlot(int size) {
+        int plot = nextPlot;
+        int slots = Math.max(1, (size + 16 + com.chigusa.partydungeon.PDDimensions.PLOT_SPACING - 1)
+                / com.chigusa.partydungeon.PDDimensions.PLOT_SPACING);
+        nextPlot += slots;
+        setDirty();
+        return plot;
+    }
+
     @Nullable
     public DungeonDef findByPlotPos(BlockPos worldPos) {
         for (DungeonDef d : dungeons.values()) {

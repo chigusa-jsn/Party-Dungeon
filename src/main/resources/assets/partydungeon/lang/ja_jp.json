@@ -9,5 +9,6 @@
   "block.partydungeon.reward_marker": "報酬チェスト",
   "block.partydungeon.plan_room": "間取りブロック（部屋・通路）",
   "block.partydungeon.plan_start": "間取りブロック（スタート）",
-  "item.partydungeon.plan_wand": "間取りの杖"
+  "item.partydungeon.plan_wand": "間取りの杖",
+  "block.partydungeon.plan_boss": "間取りブロック（ボス部屋）"
 }

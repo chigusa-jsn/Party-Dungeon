@@ -134,9 +134,9 @@ public final class PDCommands {
         root.then(Commands.literal("create").requires(src -> src.hasPermission(2))
                 .then(Commands.argument("name", StringArgumentType.string())
                         .executes(ctx -> create(ctx, 48, 24, null))
-                        .then(Commands.argument("size", IntegerArgumentType.integer(16, 128))
+                        .then(Commands.argument("size", IntegerArgumentType.integer(16, 512))
                                 .executes(ctx -> create(ctx, IntegerArgumentType.getInteger(ctx, "size"), 24, null))
-                                .then(Commands.argument("height", IntegerArgumentType.integer(8, 96))
+                                .then(Commands.argument("height", IntegerArgumentType.integer(8, 160))
                                         .executes(ctx -> create(ctx, IntegerArgumentType.getInteger(ctx, "size"),
                                                 IntegerArgumentType.getInteger(ctx, "height"), null))
                                         .then(Commands.argument("block", BlockStateArgument.block(build))
@@ -302,7 +302,7 @@ public final class PDCommands {
         }
         Msg.info(p, "―― 作る（OP） ――");
         Msg.info(p, "/pd workshop ： 作業場へ（クリエイティブ）。/pd exit で元の場所へ");
-        Msg.info(p, "/pd create \"名前\" [広さ16-128] [高さ8-96] [壁のブロック] ： 外枠を自動建築");
+        Msg.info(p, "/pd create \"名前\" [広さ16-512] [高さ8-160] [壁のブロック] ： 外枠を自動建築");
         Msg.info(p, "/pd setstart ／ /pd setgoal [半径] ： 立っている場所をスタート／ゴールに");
         Msg.info(p, "敵・ゴール・スタートは、専用ブロックを置いて右クリックで設定します");
         Msg.info(p, "/pd clear boss|all|goal ： クリア条件");

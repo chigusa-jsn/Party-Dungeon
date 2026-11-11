@@ -35,8 +35,13 @@ public final class PDConfig {
 
     /** ダンジョン内で死んでも持ち物を失わない */
     public static final ModConfigSpec.BooleanValue KEEP_INVENTORY = BUILDER
-            .comment("ダンジョンの中で死んでも、持ち物と経験値を失わない。")
+            .comment("ダンジョンの中で死んでも、持ち物と経験値を失わない（カオスは chaosLosesItems に従う）。")
             .define("run.keepInventory", true);
+
+    /** カオスで死んだら全ロス */
+    public static final ModConfigSpec.BooleanValue CHAOS_LOSES_ITEMS = BUILDER
+            .comment("難易度カオスで死んだら、持ち物と経験値をすべて失う。")
+            .define("run.chaosLosesItems", true);
 
     public static final ModConfigSpec SPEC = BUILDER.build();
 

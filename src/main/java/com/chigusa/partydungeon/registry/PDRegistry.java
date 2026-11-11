@@ -54,6 +54,8 @@ public final class PDRegistry {
             BLOCKS.register("plan_room", () -> new MarkerBlock(props().sound(SoundType.WOOL)));
     public static final DeferredBlock<Block> PLAN_START =
             BLOCKS.register("plan_start", () -> new MarkerBlock(props().sound(SoundType.WOOL)));
+    public static final DeferredBlock<Block> PLAN_BOSS =
+            BLOCKS.register("plan_boss", () -> new MarkerBlock(props().sound(SoundType.WOOL)));
 
     public static final DeferredItem<BlockItem> START_MARKER_ITEM = ITEMS.registerSimpleBlockItem(START_MARKER);
     public static final DeferredItem<BlockItem> SPAWNER_MARKER_ITEM = ITEMS.registerSimpleBlockItem(SPAWNER_MARKER);
@@ -61,6 +63,7 @@ public final class PDRegistry {
     public static final DeferredItem<BlockItem> REWARD_MARKER_ITEM = ITEMS.registerSimpleBlockItem(REWARD_MARKER);
     public static final DeferredItem<BlockItem> PLAN_ROOM_ITEM = ITEMS.registerSimpleBlockItem(PLAN_ROOM);
     public static final DeferredItem<BlockItem> PLAN_START_ITEM = ITEMS.registerSimpleBlockItem(PLAN_START);
+    public static final DeferredItem<BlockItem> PLAN_BOSS_ITEM = ITEMS.registerSimpleBlockItem(PLAN_BOSS);
     public static final DeferredItem<Item> PLAN_WAND =
             ITEMS.register("plan_wand", () -> new PlanWandItem(new Item.Properties().stacksTo(1)));
 
@@ -79,6 +82,7 @@ public final class PDRegistry {
                         out.accept(PLAN_WAND.get());
                         out.accept(PLAN_ROOM_ITEM.get());
                         out.accept(PLAN_START_ITEM.get());
+                        out.accept(PLAN_BOSS_ITEM.get());
                         out.accept(START_MARKER_ITEM.get());
                         out.accept(SPAWNER_MARKER_ITEM.get());
                         out.accept(GOAL_MARKER_ITEM.get());
@@ -89,7 +93,7 @@ public final class PDRegistry {
     /** 目印ブロック（ダンジョンに組み立てるときは空気にする）か */
     public static boolean isMarker(Block b) {
         return b == START_MARKER.get() || b == SPAWNER_MARKER.get() || b == GOAL_MARKER.get()
-                || b == REWARD_MARKER.get() || b == PLAN_ROOM.get() || b == PLAN_START.get();
+                || b == REWARD_MARKER.get() || b == PLAN_ROOM.get() || b == PLAN_START.get() || b == PLAN_BOSS.get();
     }
 
     public static void register(IEventBus modBus) {

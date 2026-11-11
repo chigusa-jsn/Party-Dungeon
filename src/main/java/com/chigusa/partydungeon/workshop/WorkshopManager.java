@@ -83,6 +83,7 @@ public final class WorkshopManager {
                 com.chigusa.partydungeon.registry.PDRegistry.PLAN_WAND.get(),
                 com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM_ITEM.get(),
                 com.chigusa.partydungeon.registry.PDRegistry.PLAN_START_ITEM.get(),
+                com.chigusa.partydungeon.registry.PDRegistry.PLAN_BOSS_ITEM.get(),
                 com.chigusa.partydungeon.registry.PDRegistry.START_MARKER_ITEM.get(),
                 com.chigusa.partydungeon.registry.PDRegistry.SPAWNER_MARKER_ITEM.get(),
                 com.chigusa.partydungeon.registry.PDRegistry.GOAL_MARKER_ITEM.get(),
@@ -90,7 +91,8 @@ public final class WorkshopManager {
         for (net.minecraft.world.item.Item item : kit) {
             if (p.getInventory().countItem(item) == 0) {
                 int n = item == com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM_ITEM.get()
-                        || item == com.chigusa.partydungeon.registry.PDRegistry.SPAWNER_MARKER_ITEM.get() ? 64 : 1;
+                        || item == com.chigusa.partydungeon.registry.PDRegistry.SPAWNER_MARKER_ITEM.get()
+                        || item == com.chigusa.partydungeon.registry.PDRegistry.PLAN_BOSS_ITEM.get() ? 64 : 1;
                 p.getInventory().add(new net.minecraft.world.item.ItemStack(item, n));
             }
         }
@@ -164,7 +166,7 @@ public final class WorkshopManager {
             data.workshopReturns.put(p.getUUID(), ReturnInfo.of(p));
         }
         String id = "d" + data.nextId++;
-        DungeonDef d = new DungeonDef(id, name, p.getUUID(), data.nextPlot++, size, height);
+        DungeonDef d = new DungeonDef(id, name, p.getUUID(), data.allocatePlot(size), size, height);
         // スタート地点の初期値：床の中央
         d.start = new BlockPos(size / 2, 1, size / 2);
         data.dungeons.put(id, d);

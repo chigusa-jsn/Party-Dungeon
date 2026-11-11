@@ -9,5 +9,6 @@
   "block.partydungeon.reward_marker": "Reward Chest",
   "block.partydungeon.plan_room": "Plan Block (Room/Corridor)",
   "block.partydungeon.plan_start": "Plan Block (Start)",
-  "item.partydungeon.plan_wand": "Plan Wand"
+  "item.partydungeon.plan_wand": "Plan Wand",
+  "block.partydungeon.plan_boss": "Plan Block (Boss Room)"
 }
