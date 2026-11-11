@@ -238,6 +238,67 @@ public final class PDGameTests {
                 .thenSucceed();
     }
 
+    /** ダンジョンで死ぬと：持ち物は残り、挑戦から抜け、復活で元の場所へ。カオスは全ロス */
+    @GameTest(template = "empty", timeoutTicks = 20000)
+    public static void deathReturn(GameTestHelper helper) {
+        MinecraftServer server = helper.getLevel().getServer();
+        PDDimensions.ARENA = Level.NETHER;
+        PDDimensions.WORKSHOP = Level.END;
+        ServerLevel ws = server.getLevel(PDDimensions.WORKSHOP);
+        ServerPlayer normal = helper.makeMockServerPlayerInLevel();
+        ServerPlayer chaos = helper.makeMockServerPlayerInLevel();
+        for (ServerPlayer pl : List.of(normal, chaos)) {
+            pl.setGameMode(GameType.SURVIVAL);
+            pl.getInventory().add(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.DIAMOND, 5));
+        }
+        PDData data = PDData.get(server);
+        DungeonDef d = new DungeonDef("test_death", "死亡テスト", normal.getUUID(), 950, 16, 8);
+        d.clear = ClearCondition.GOAL;
+        data.dungeons.put(d.id, d);
+        BlockJobs.runNow(BlockJobs.frame(ws, d.plotOrigin(), 16, 8, Blocks.STONE_BRICKS.defaultBlockState(), null));
+        ws.setBlockAndUpdate(d.plotOrigin().offset(8, 1, 8),
+                com.chigusa.partydungeon.registry.PDRegistry.START_MARKER.get().defaultBlockState());
+        ws.setBlockAndUpdate(d.plotOrigin().offset(2, 1, 2),
+                com.chigusa.partydungeon.registry.PDRegistry.GOAL_MARKER.get().defaultBlockState());
+        WorkshopManager.publish(server, normal, d);
+        helper.assertTrue(d.published, "公開できていない");
+        Level original = normal.level();
+        RunManager.start(server, normal, d, com.chigusa.partydungeon.data.Difficulty.NORMAL);
+        RunManager.start(server, chaos, d, com.chigusa.partydungeon.data.Difficulty.CHAOS);
+        helper.startSequence()
+                .thenWaitUntil(() -> {
+                    RunManager.Run a = RunManager.runOf(normal.getUUID());
+                    RunManager.Run b = RunManager.runOf(chaos.getUUID());
+                    helper.assertTrue(a != null && a.state == RunManager.State.ACTIVE
+                            && b != null && b.state == RunManager.State.ACTIVE, "まだ開始していない");
+                })
+                .thenExecute(() -> {
+                    normal.kill();
+                    chaos.kill();
+                    helper.assertTrue(!RunManager.isInRun(normal.getUUID()) && !RunManager.isInRun(chaos.getUUID()),
+                            "死んだのに挑戦から抜けていない");
+                    // 復活（テストでは手で呼ぶ）
+                    for (ServerPlayer pl : List.of(normal, chaos)) {
+                        pl.setHealth(20f);
+                        RunManager.onPlayerClone(pl);
+                        RunManager.onRespawn(server, pl);
+                    }
+                    helper.assertTrue(normal.level() == original && chaos.level() == original, "元の場所に戻っていない");
+                    helper.assertTrue(normal.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND) == 5,
+                            "ノーマルで持ち物が消えた");
+                    helper.assertTrue(chaos.getInventory().countItem(net.minecraft.world.item.Items.DIAMOND) == 0,
+                            "カオスで持ち物が残った");
+                })
+                .thenWaitUntil(() -> helper.assertTrue(
+                        RunManager.rooms().stream().allMatch(RunManager.Room::isFree), "部屋が片付いていない"))
+                .thenExecute(() -> {
+                    data.dungeons.remove(d.id);
+                    normal.discard();
+                    chaos.discard();
+                })
+                .thenSucceed();
+    }
+
     private static List<Zombie> zombies(ServerLevel arena, BlockPos o) {
         return arena.getEntitiesOfClass(Zombie.class, new AABB(o.getX(), o.getY(), o.getZ(),
                 o.getX() + 16, o.getY() + 8, o.getZ() + 16), z -> z.isAlive());
