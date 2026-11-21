@@ -124,7 +124,7 @@ public final class Theme {
     /** /pd create で壁のブロックを指定されたとき用：全部その1種類 */
     public static Theme single(BlockState wall) {
         Block w = wall.getBlock();
-        return new Theme("custom", "指定ブロック", b(w), b(w), b(w), Blocks.SEA_LANTERN, w);
+        return new Theme("custom", "指定ブロック", b(w), b(w), b(w), Blocks.SEA_LANTERN, Blocks.CHISELED_STONE_BRICKS);
     }
 
     /** 位置で決まる「ばらつき」。同じ場所なら毎回同じブロックになる */
