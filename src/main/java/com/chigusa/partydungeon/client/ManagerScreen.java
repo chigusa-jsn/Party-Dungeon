@@ -108,7 +108,8 @@ public class ManagerScreen extends PDScreen {
         });
         button("報酬を設定", px + half + 4, y, half, 20, b -> act("rewards"));
         y += 24;
-        button("クリア条件: " + d.getString("clear"), px, y, pw, 20, b -> act("clear"));
+        button("クリア条件: " + d.getString("clear"), px, y, half, 20, b -> act("clear"));
+        button(d.getBoolean("locked") ? "解放: 依頼で解放" : "解放: 最初から遊べる", px + half + 4, y, half, 20, b -> act("lock"));
         y += 24;
         button(d.getBoolean("published") ? "もう一度公開（更新）" : "公開する", px, y, half, 20, b -> act("publish"));
         if (d.getBoolean("published")) {

@@ -104,9 +104,18 @@ public final class Menus {
         int pg = Math.max(0, Math.min(page, pages - 1));
         ButtonMenu.Builder b = new ButtonMenu.Builder(Component.literal("ダンジョンを選ぶ（空き部屋 "
                 + RunManager.freeRooms() + "/" + PDConfig.ROOM_COUNT.get() + "）"), 6);
+        PDData pdata = PDData.get(server);
         for (int i = 0; i < perPage && pg * perPage + i < list.size(); i++) {
             DungeonDef d = list.get(pg * perPage + i);
             String id = d.id;
+            if (!pdata.isUnlocked(p.getUUID(), d)) {
+                // まだ解放していない：鍵つきで見せる
+                String hint = com.chigusa.partydungeon.api.PDApi.hint(d);
+                b.button(i, icon(Items.IRON_BARS, "[鍵] " + d.name, ChatFormatting.DARK_GRAY,
+                        hint.isEmpty() ? "まだ解放されていません" : "依頼「" + hint + "」で解放",
+                        "解放した人がリーダーなら、いっしょに挑めます"), null);
+                continue;
+            }
             b.button(i, dungeonIcon(d, "クリックでロビーへ"), pl -> {
                 if (!PartyManager.canLead(pl.getUUID())) {
                     Msg.warn(pl, "ダンジョンを選べるのはリーダーだけです。");
@@ -233,6 +242,10 @@ public final class Menus {
                                     m.closeContainer();
                                 }
                             }
+                        }
+                        if (!PDData.get(server).isUnlocked(pl.getUUID(), d)) {
+                            Msg.warn(pl, "このダンジョンはまだ解放されていません。");
+                            return;
                         }
                         RunManager.start(server, pl, d,
                                 pt == null ? com.chigusa.partydungeon.data.Difficulty.NORMAL : pt.difficulty);

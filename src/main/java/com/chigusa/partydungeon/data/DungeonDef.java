@@ -37,6 +37,8 @@ public final class DungeonDef {
     public final EnumMap<Difficulty, List<Reward>> rewards = new EnumMap<>(Difficulty.class);
     /** 公開済みか（公開すると「遊ぶ」画面に出る） */
     public boolean published;
+    /** true なら、解放した人（リーダー）しか挑めない。解放は jsn-Craft の依頼のごほうびなど */
+    public boolean locked;
     /** 公開した回数（ファイル更新の目印） */
     public int revision;
 
@@ -128,6 +130,7 @@ public final class DungeonDef {
         });
         t.put("rewards", rw);
         t.putBoolean("published", published);
+        t.putBoolean("locked", locked);
         t.putInt("revision", revision);
         return t;
     }
@@ -160,6 +163,7 @@ public final class DungeonDef {
             d.rewards.put(diff, entries);
         }
         d.published = t.getBoolean("published");
+        d.locked = t.getBoolean("locked");
         d.revision = t.getInt("revision");
         return d;
     }

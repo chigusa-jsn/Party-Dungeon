@@ -31,6 +31,8 @@ public final class PDData extends SavedData {
     public final Map<UUID, ReturnInfo> workshopReturns = new HashMap<>();
     /** 部屋番号 → 片付けが必要な範囲（size, height） */
     public final Map<Integer, int[]> dirtyRooms = new HashMap<>();
+    /** プレイヤーごとの、解放したダンジョン（ID） */
+    public final Map<UUID, java.util.Set<String>> unlocked = new HashMap<>();
     public int nextPlot;
     public int nextId = 1;
 
@@ -60,6 +62,11 @@ public final class PDData extends SavedData {
     }
 
     @Nullable
+    /** そのダンジョンに挑めるか（解放がいらないか、解放ずみ） */
+    public boolean isUnlocked(UUID player, DungeonDef d) {
+        return !d.locked || unlocked.getOrDefault(player, java.util.Set.of()).contains(d.id);
+    }
+
     public DungeonDef findByName(String nameOrId) {
         DungeonDef byId = dungeons.get(nameOrId);
         if (byId != null) {
@@ -92,6 +99,13 @@ public final class PDData extends SavedData {
         dirtyRooms.forEach((room, sz) -> dirty.putIntArray(Integer.toString(room), sz));
         tag.put("dirtyRooms", dirty);
 
+        CompoundTag un = new CompoundTag();
+        unlocked.forEach((id, set) -> {
+            ListTag l = new ListTag();
+            for (String s : set) l.add(net.minecraft.nbt.StringTag.valueOf(s));
+            un.put(id.toString(), l);
+        });
+        tag.put("unlocked", un);
         tag.putInt("nextPlot", nextPlot);
         tag.putInt("nextId", nextId);
         return tag;
@@ -125,6 +139,17 @@ public final class PDData extends SavedData {
             try {
                 data.dirtyRooms.put(Integer.parseInt(key), dirty.getIntArray(key));
             } catch (NumberFormatException ignored) {
+                // 読み飛ばす
+            }
+        }
+        CompoundTag un = tag.getCompound("unlocked");
+        for (String key : un.getAllKeys()) {
+            try {
+                ListTag l = un.getList(key, Tag.TAG_STRING);
+                java.util.Set<String> set = new java.util.LinkedHashSet<>();
+                for (int i = 0; i < l.size(); i++) set.add(l.getString(i));
+                data.unlocked.put(UUID.fromString(key), set);
+            } catch (IllegalArgumentException ignored) {
                 // 読み飛ばす
             }
         }

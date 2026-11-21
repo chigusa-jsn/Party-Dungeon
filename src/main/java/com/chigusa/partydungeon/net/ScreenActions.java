@@ -93,6 +93,7 @@ public final class ScreenActions {
             e.putString("id", d.id);
             e.putString("name", d.name);
             e.putBoolean("published", d.published);
+            e.putBoolean("locked", d.locked);
             e.putInt("revision", d.revision);
             e.putString("clear", d.clear.label);
             e.putInt("size", d.size);
@@ -167,6 +168,12 @@ public final class ScreenActions {
                 d.published = false;
                 pd.setDirty();
                 Msg.ok(p, "「" + d.name + "」を非公開にしました。");
+                openManager(server, p, d.id);
+            }
+            case "lock" -> {
+                d.locked = !d.locked;
+                pd.setDirty();
+                Msg.ok(p, "「" + d.name + "」は" + (d.locked ? "解放が必要になりました（jsn-Craft の依頼のごほうびで解放）" : "だれでも挑めるようになりました"));
                 openManager(server, p, d.id);
             }
             case "clear" -> {

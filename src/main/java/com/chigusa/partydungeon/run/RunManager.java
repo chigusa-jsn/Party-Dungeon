@@ -382,7 +382,11 @@ public final class RunManager {
             int delay = PDConfig.RETURN_DELAY_SECONDS.get();
             run.returnTick = now + delay * 20L;
             String time = Msg.formatTicks(now - run.startTick);
+            boolean first = true;
             for (ServerPlayer p : online) {
+                // jsn-Craft の依頼・スマホのお知らせ（入っていれば）
+                com.chigusa.partydungeon.api.PDApi.cleared(p, run.def, run.difficulty.id, run.difficulty.label, first);
+                first = false;
                 Msg.ok(p, "★ クリア！【" + run.difficulty.label + "】タイム " + time + "  " + delay + " 秒後に元の場所へ戻ります。");
                 rollRewards(server, run, p);
                 p.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1f, 1f);
