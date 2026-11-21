@@ -28,7 +28,8 @@ import net.minecraft.world.level.block.state.BlockState;
  * 床に描いた「間取り」を読み取り、大きく引き伸ばして本物の部屋と通路を建てる。
  *
  * ・1マス = scale × scale ブロック
- * ・白: 2×2 以上のかたまりの一部なら「部屋」、細い線は「通路」（幅は別に決められる）
+ * ・白: 部屋（1マスでも部屋）
+ * ・灰: 通路（幅は別に決められる）
  * ・紫: ボス部屋。つながったかたまりが、天井の高さ 20 の円形の部屋になる
  * ・赤: スタート地点
  */
@@ -45,6 +46,7 @@ public final class PlanBuilder {
     static final int EMPTY = 0;
     static final int NORMAL = 1;
     static final int BOSS = 2;
+    static final int CORRIDOR = 3;
 
     /** 読み取った間取り。cells は EMPTY / NORMAL / BOSS */
     public record Plan(int w, int h, int[][] cells, @Nullable int[] start) {
@@ -75,6 +77,9 @@ public final class PlanBuilder {
     private static int typeOf(Block b) {
         if (b == PDRegistry.PLAN_ROOM.get() || b == PDRegistry.PLAN_START.get()) {
             return NORMAL;
+        }
+        if (b == PDRegistry.PLAN_CORRIDOR.get()) {
+            return CORRIDOR;
         }
         if (b == PDRegistry.PLAN_BOSS.get()) {
             return BOSS;
@@ -133,19 +138,6 @@ public final class PlanBuilder {
         return cell(plan, x, z) != EMPTY;
     }
 
-    /** 普通の部屋の一部か（白の 2×2 のかたまりに入っているか）。入っていなければ通路 */
-    static boolean isRoomCell(Plan plan, int cx, int cz) {
-        for (int dx = -1; dx <= 0; dx++) {
-            for (int dz = -1; dz <= 0; dz++) {
-                if (cell(plan, cx + dx, cz + dz) == NORMAL && cell(plan, cx + dx + 1, cz + dz) == NORMAL
-                        && cell(plan, cx + dx, cz + dz + 1) == NORMAL && cell(plan, cx + dx + 1, cz + dz + 1) == NORMAL) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     /**
      * 床になる場所と、その天井の高さ（ブロック単位）。0 = 床ではない。
      * 普通の部屋・通路は normalTop、ボス部屋は BOSS_HEIGHT - 1。
@@ -161,10 +153,11 @@ public final class PlanBuilder {
         // 白（部屋・通路）
         for (int cx = 0; cx < plan.w; cx++) {
             for (int cz = 0; cz < plan.h; cz++) {
-                if (plan.cells[cx][cz] != NORMAL) {
+                int type = plan.cells[cx][cz];
+                if (type != NORMAL && type != CORRIDOR) {
                     continue;
                 }
-                boolean room = isRoomCell(plan, cx, cz);
+                boolean room = type == NORMAL;
                 for (int x = 0; x < scale; x++) {
                     for (int z = 0; z < scale; z++) {
                         boolean inX = x >= lo && x < hi;
@@ -231,7 +224,8 @@ public final class PlanBuilder {
                 for (int[] p : group) {
                     int[][] dirs = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
                     for (int[] d : dirs) {
-                        if (cell(plan, p[0] + d[0], p[1] + d[1]) != NORMAL) {
+                        int nType = cell(plan, p[0] + d[0], p[1] + d[1]);
+                        if (nType != NORMAL && nType != CORRIDOR) {
                             continue;
                         }
                         if (d[0] != 0) {

@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "partydungeon:block/crumble_floor_1"
+  }
+}

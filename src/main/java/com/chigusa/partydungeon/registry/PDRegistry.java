@@ -59,6 +59,8 @@ public final class PDRegistry {
     // ---- 間取りを描くブロック
     public static final DeferredBlock<Block> PLAN_ROOM =
             BLOCKS.register("plan_room", () -> new MarkerBlock(props().sound(SoundType.WOOL)));
+    public static final DeferredBlock<Block> PLAN_CORRIDOR =
+            BLOCKS.register("plan_corridor", () -> new MarkerBlock(props().sound(SoundType.WOOL)));
     public static final DeferredBlock<Block> PLAN_START =
             BLOCKS.register("plan_start", () -> new MarkerBlock(props().sound(SoundType.WOOL)));
     public static final DeferredBlock<Block> PLAN_BOSS =
@@ -69,6 +71,7 @@ public final class PDRegistry {
     public static final DeferredItem<BlockItem> GOAL_MARKER_ITEM = ITEMS.registerSimpleBlockItem(GOAL_MARKER);
     public static final DeferredItem<BlockItem> REWARD_MARKER_ITEM = ITEMS.registerSimpleBlockItem(REWARD_MARKER);
     public static final DeferredItem<BlockItem> PLAN_ROOM_ITEM = ITEMS.registerSimpleBlockItem(PLAN_ROOM);
+    public static final DeferredItem<BlockItem> PLAN_CORRIDOR_ITEM = ITEMS.registerSimpleBlockItem(PLAN_CORRIDOR);
     public static final DeferredItem<BlockItem> PLAN_START_ITEM = ITEMS.registerSimpleBlockItem(PLAN_START);
     public static final DeferredItem<BlockItem> PLAN_BOSS_ITEM = ITEMS.registerSimpleBlockItem(PLAN_BOSS);
     public static final DeferredItem<Item> PLAN_WAND =
@@ -78,6 +81,14 @@ public final class PDRegistry {
     public static final DeferredBlock<ArrowTrapBlock> ARROW_TRAP = BLOCKS.register("arrow_trap",
             () -> new ArrowTrapBlock(BlockBehaviour.Properties.of().strength(1.5f, 6f).sound(SoundType.STONE).noLootTable()));
     public static final DeferredItem<BlockItem> ARROW_TRAP_ITEM = ITEMS.registerSimpleBlockItem(ARROW_TRAP);
+    public static final DeferredBlock<com.chigusa.partydungeon.trap.CrumbleFloorBlock> CRUMBLE_FLOOR =
+            BLOCKS.register("crumble_floor", () -> new com.chigusa.partydungeon.trap.CrumbleFloorBlock(
+                    BlockBehaviour.Properties.of().strength(1.0f, 6f).sound(SoundType.STONE).noLootTable().noOcclusion()));
+    public static final DeferredItem<BlockItem> CRUMBLE_FLOOR_ITEM = ITEMS.registerSimpleBlockItem(CRUMBLE_FLOOR);
+    public static final DeferredBlock<Block> FALL_RETURN = BLOCKS.register("fall_return",
+            () -> new Block(BlockBehaviour.Properties.of().strength(1.5f, 6f).sound(SoundType.AMETHYST).noLootTable()
+                    .lightLevel(s -> 7)));
+    public static final DeferredItem<BlockItem> FALL_RETURN_ITEM = ITEMS.registerSimpleBlockItem(FALL_RETURN);
     public static final Map<FloorKind, DeferredBlock<EffectFloorBlock>> FLOORS = new EnumMap<>(FloorKind.class);
     public static final Map<FloorKind, DeferredItem<BlockItem>> FLOOR_ITEMS = new EnumMap<>(FloorKind.class);
 
@@ -108,6 +119,7 @@ public final class PDRegistry {
                     .displayItems((params, out) -> {
                         out.accept(PLAN_WAND.get());
                         out.accept(PLAN_ROOM_ITEM.get());
+                        out.accept(PLAN_CORRIDOR_ITEM.get());
                         out.accept(PLAN_START_ITEM.get());
                         out.accept(PLAN_BOSS_ITEM.get());
                         out.accept(START_MARKER_ITEM.get());
@@ -115,6 +127,8 @@ public final class PDRegistry {
                         out.accept(GOAL_MARKER_ITEM.get());
                         out.accept(REWARD_MARKER_ITEM.get());
                         out.accept(ARROW_TRAP_ITEM.get());
+                        out.accept(CRUMBLE_FLOOR_ITEM.get());
+                        out.accept(FALL_RETURN_ITEM.get());
                         FLOOR_ITEMS.values().forEach(i -> out.accept(i.get()));
                     })
                     .build());
@@ -122,7 +136,7 @@ public final class PDRegistry {
     /** 目印ブロック（ダンジョンに組み立てるときは空気にする）か */
     public static boolean isMarker(Block b) {
         return b == START_MARKER.get() || b == SPAWNER_MARKER.get() || b == GOAL_MARKER.get()
-                || b == REWARD_MARKER.get() || b == PLAN_ROOM.get() || b == PLAN_START.get() || b == PLAN_BOSS.get();
+                || b == REWARD_MARKER.get() || b == PLAN_ROOM.get() || b == PLAN_CORRIDOR.get() || b == PLAN_START.get() || b == PLAN_BOSS.get();
     }
 
     public static void register(IEventBus modBus) {

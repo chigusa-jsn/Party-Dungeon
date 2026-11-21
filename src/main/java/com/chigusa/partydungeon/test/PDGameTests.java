@@ -156,7 +156,8 @@ public final class PDGameTests {
                 if (corridor && z == 0) {
                     continue;
                 }
-                ws.setBlockAndUpdate(base.offset(x, 0, z), room);
+                ws.setBlockAndUpdate(base.offset(x, 0, z), corridor
+                        ? com.chigusa.partydungeon.registry.PDRegistry.PLAN_CORRIDOR.get().defaultBlockState() : room);
             }
         }
         ws.setBlockAndUpdate(base, com.chigusa.partydungeon.registry.PDRegistry.PLAN_START.get().defaultBlockState());
@@ -204,8 +205,8 @@ public final class PDGameTests {
         // 赤(スタート) 白 白 紫紫紫 ← 紫は 3×3
         BlockPos base = new BlockPos(7000, 64, 7000);
         ws.setBlockAndUpdate(base.offset(0, 0, 1), com.chigusa.partydungeon.registry.PDRegistry.PLAN_START.get().defaultBlockState());
-        ws.setBlockAndUpdate(base.offset(1, 0, 1), com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM.get().defaultBlockState());
-        ws.setBlockAndUpdate(base.offset(2, 0, 1), com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM.get().defaultBlockState());
+        ws.setBlockAndUpdate(base.offset(1, 0, 1), com.chigusa.partydungeon.registry.PDRegistry.PLAN_CORRIDOR.get().defaultBlockState());
+        ws.setBlockAndUpdate(base.offset(2, 0, 1), com.chigusa.partydungeon.registry.PDRegistry.PLAN_CORRIDOR.get().defaultBlockState());
         for (int x = 3; x < 6; x++) {
             for (int z = 0; z < 3; z++) {
                 ws.setBlockAndUpdate(base.offset(x, 0, z), com.chigusa.partydungeon.registry.PDRegistry.PLAN_BOSS.get().defaultBlockState());

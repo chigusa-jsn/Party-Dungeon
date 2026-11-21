@@ -7,7 +7,7 @@
   "block.partydungeon.spawner_marker": "敵の出現ブロック",
   "block.partydungeon.goal_marker": "ゴールブロック",
   "block.partydungeon.reward_marker": "報酬チェスト",
-  "block.partydungeon.plan_room": "間取りブロック（部屋・通路）",
+  "block.partydungeon.plan_room": "間取りブロック（部屋）",
   "block.partydungeon.plan_start": "間取りブロック（スタート）",
   "item.partydungeon.plan_wand": "間取りの杖",
   "block.partydungeon.plan_boss": "間取りブロック（ボス部屋）",
@@ -23,5 +23,9 @@
   "block.partydungeon.levitate_floor": "浮遊の床",
   "block.partydungeon.speed_floor": "加速の床",
   "block.partydungeon.jump_floor": "ジャンプ強化の床",
-  "block.partydungeon.heal_floor": "回復の床"
+  "block.partydungeon.heal_floor": "回復の床",
+  "block.partydungeon.spike_floor": "トゲの床",
+  "block.partydungeon.crumble_floor": "崩れる床",
+  "block.partydungeon.fall_return": "落下リターンブロック",
+  "block.partydungeon.plan_corridor": "間取りブロック（通路）"
 }

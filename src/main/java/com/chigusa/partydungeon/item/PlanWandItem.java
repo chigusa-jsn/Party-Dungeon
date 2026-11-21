@@ -25,7 +25,7 @@ public class PlanWandItem extends Item {
             }
             PlanBuilder.Plan plan = PlanBuilder.read(level, ctx.getClickedPos());
             if (plan == null) {
-                Msg.warn(sp, "間取りブロック（白・赤・紫）を右クリックしてください。");
+                Msg.warn(sp, "間取りブロック（白・灰・赤・紫）を右クリックしてください。");
                 return InteractionResult.FAIL;
             }
             CompoundTag t = new CompoundTag();

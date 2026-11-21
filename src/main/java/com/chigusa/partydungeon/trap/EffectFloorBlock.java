@@ -3,7 +3,6 @@ package com.chigusa.partydungeon.trap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
@@ -11,7 +10,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
-import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import org.joml.Vector3f;
 
 /**
@@ -27,21 +25,14 @@ public class EffectFloorBlock extends Block {
         this.kind = kind;
     }
 
-    /** プレイヤーの毎tick（サーバー側）。足元が状態異常の床なら効果をかける */
-    public static void onPlayerTick(PlayerTickEvent.Post e) {
-        if (!(e.getEntity() instanceof ServerPlayer p) || p.isSpectator() || p.isCreative() || !p.isAlive()) {
+    /** 乗っているプレイヤーに効果をかける（TrapEvents から 5tick ごとに呼ばれる） */
+    void apply(Player p) {
+        if (kind == FloorKind.SPIKE) {
+            if (p.tickCount % 10 == 0) {
+                p.hurt(p.damageSources().cactus(), 2.0f);
+            }
             return;
         }
-        if (!p.onGround() || p.tickCount % 5 != 0) {
-            return;
-        }
-        BlockState state = p.level().getBlockState(p.getOnPos());
-        if (state.getBlock() instanceof EffectFloorBlock floor) {
-            floor.apply(p);
-        }
-    }
-
-    private void apply(Player p) {
         if (kind == FloorKind.FIRE) {
             if (!p.hasEffect(MobEffects.FIRE_RESISTANCE)) {
                 p.igniteForSeconds(4);
@@ -67,6 +58,9 @@ public class EffectFloorBlock extends Block {
         double x = pos.getX() + random.nextDouble();
         double y = pos.getY() + 1.02;
         double z = pos.getZ() + random.nextDouble();
+        if (kind == FloorKind.SPIKE) {
+            return;
+        }
         if (kind == FloorKind.FIRE) {
             level.addParticle(random.nextBoolean() ? ParticleTypes.FLAME : ParticleTypes.SMALL_FLAME, x, y, z, 0, 0.02, 0);
             return;

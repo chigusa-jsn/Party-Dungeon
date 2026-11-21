@@ -8,6 +8,7 @@ import net.minecraft.world.effect.MobEffects;
 
 /** 状態異常の床の種類 */
 public enum FloorKind {
+    SPIKE("spike_floor", "トゲの床", "Spike Floor", null, 0, 0, 0xB8B8C0, 0),
     FIRE("fire_floor", "炎の床", "Fire Floor", null, 0, 0, 0xFF6020, 8),
     POISON("poison_floor", "毒の床", "Poison Floor", MobEffects.POISON, 0, 80, 0x60D040, 0),
     SLOW("slow_floor", "鈍足の床", "Slowness Floor", MobEffects.MOVEMENT_SLOWDOWN, 2, 40, 0x6080A0, 0),

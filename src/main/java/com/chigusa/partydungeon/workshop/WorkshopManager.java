@@ -82,6 +82,7 @@ public final class WorkshopManager {
         net.minecraft.world.item.Item[] kit = {
                 com.chigusa.partydungeon.registry.PDRegistry.PLAN_WAND.get(),
                 com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM_ITEM.get(),
+                com.chigusa.partydungeon.registry.PDRegistry.PLAN_CORRIDOR_ITEM.get(),
                 com.chigusa.partydungeon.registry.PDRegistry.PLAN_START_ITEM.get(),
                 com.chigusa.partydungeon.registry.PDRegistry.PLAN_BOSS_ITEM.get(),
                 com.chigusa.partydungeon.registry.PDRegistry.START_MARKER_ITEM.get(),
@@ -91,6 +92,7 @@ public final class WorkshopManager {
         for (net.minecraft.world.item.Item item : kit) {
             if (p.getInventory().countItem(item) == 0) {
                 int n = item == com.chigusa.partydungeon.registry.PDRegistry.PLAN_ROOM_ITEM.get()
+                        || item == com.chigusa.partydungeon.registry.PDRegistry.PLAN_CORRIDOR_ITEM.get()
                         || item == com.chigusa.partydungeon.registry.PDRegistry.SPAWNER_MARKER_ITEM.get()
                         || item == com.chigusa.partydungeon.registry.PDRegistry.PLAN_BOSS_ITEM.get() ? 64 : 1;
                 p.getInventory().add(new net.minecraft.world.item.ItemStack(item, n));

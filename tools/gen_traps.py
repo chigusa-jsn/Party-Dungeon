@@ -25,6 +25,7 @@ def tiles(base, seed):
 
 # 状態異常の床（id, 色, 模様）
 FLOORS = [
+    ("spike_floor", "トゲの床", "Spike Floor", 0xB8B8C0, "spike"),
     ("fire_floor", "炎の床", "Fire Floor", 0xFF6020, "flame"),
     ("poison_floor", "毒の床", "Poison Floor", 0x60D040, "drop"),
     ("slow_floor", "鈍足の床", "Slowness Floor", 0x6080A0, "wave"),
@@ -72,6 +73,13 @@ for i, (fid, ja, en, color, mark) in enumerate(FLOORS):
     elif mark == "arrow":
         for y0 in (4, 11):
             d.polygon([(13, y0), (9, y0 - 3), (9, y0 + 3)], fill=col); d.rectangle([2, y0 - 1, 9, y0 + 1], fill=col)
+    elif mark == "spike":
+        for x0 in (3, 11):
+            for y0 in (3, 11):
+                d.ellipse([x0 - 2, y0 - 2, x0 + 2, y0 + 2], fill=mix(base, (0, 0, 0), 0.5))
+                d.point((x0, y0), fill=(235, 235, 245, 255)); d.point((x0 - 1, y0 - 1), fill=(170, 170, 180, 255))
+                d.point((x0 + 1, y0 + 1), fill=(110, 110, 120, 255))
+        d.point([(7, 7), (8, 8)], fill=(200, 200, 210, 255))
     elif mark == "plus":
         d.rectangle([6, 2, 9, 13], fill=col); d.rectangle([2, 6, 13, 9], fill=col); d.rectangle([7, 3, 8, 12], fill=glow)
     save(im, fid)
@@ -110,9 +118,49 @@ v = {"facing=north": {"model": "partydungeon:block/arrow_trap"}, "facing=east": 
      "facing=up": {"model": "partydungeon:block/arrow_trap_vertical"}, "facing=down": {"model": "partydungeon:block/arrow_trap_vertical", "x": 180}}
 wj(f"{A}/blockstates/arrow_trap.json", {"variants": v})
 
+# 崩れる床（0: ふつう 1: ひび 2: 消えている）
+for st in (0, 1):
+    im = Image.new("RGBA", (16, 16)); d = ImageDraw.Draw(im); rnd = random.Random(9)
+    for y in range(16):
+        for x in range(16):
+            v = rnd.randint(-8, 8); im.putpixel((x, y), (200 + v, 176 + v, 120 + v, 255))
+    d.rectangle([0, 0, 15, 15], outline=(150, 124, 76, 255)); d.rectangle([3, 3, 12, 12], outline=(176, 150, 98, 255))
+    if st == 1:
+        for c in ([(2, 1), (5, 5), (4, 9), (7, 14)], [(13, 2), (10, 6), (12, 11)], [(1, 12), (6, 9), (11, 8), (15, 6)]):
+            d.line(c, fill=(90, 64, 30, 255))
+    save(im, f"crumble_floor_{st}")
+    wj(f"{A}/models/block/crumble_floor_{st}.json", {"parent": "minecraft:block/cube_all", "textures": {"all": f"partydungeon:block/crumble_floor_{st}"}})
+wj(f"{A}/models/block/empty.json", {"textures": {"particle": "partydungeon:block/crumble_floor_0"}, "elements": []})
+wj(f"{A}/blockstates/crumble_floor.json", {"variants": {"stage=0": {"model": "partydungeon:block/crumble_floor_0"},
+    "stage=1": {"model": "partydungeon:block/crumble_floor_1"}, "stage=2": {"model": "partydungeon:block/empty"}}})
+wj(f"{A}/models/item/crumble_floor.json", {"parent": "partydungeon:block/crumble_floor_0"})
+
+# 落下リターンブロック（うずまき）
+im = Image.new("RGBA", (16, 16)); rnd = random.Random(3)
+import math
+for y in range(16):
+    for x in range(16):
+        dx, dy = x - 7.5, y - 7.5; r = math.hypot(dx, dy); a = math.atan2(dy, dx)
+        t = (math.sin(a * 2 + r * 0.9) + 1) / 2
+        im.putpixel((x, y), (int(40 + 90 * t), int(20 + 40 * t), int(90 + 150 * t), 255))
+ImageDraw.Draw(im).rectangle([0, 0, 15, 15], outline=(30, 10, 60, 255))
+save(im, "fall_return")
+wj(f"{A}/models/block/fall_return.json", {"parent": "minecraft:block/cube_all", "textures": {"all": "partydungeon:block/fall_return"}})
+wj(f"{A}/models/item/fall_return.json", {"parent": "partydungeon:block/fall_return"})
+wj(f"{A}/blockstates/fall_return.json", {"variants": {"": {"model": "partydungeon:block/fall_return"}}})
+
+# 間取りブロック（通路）
+wj(f"{A}/models/block/plan_corridor.json", {"parent": "minecraft:block/cube_all", "textures": {"all": "minecraft:block/light_gray_concrete"}})
+wj(f"{A}/models/item/plan_corridor.json", {"parent": "partydungeon:block/plan_corridor"})
+wj(f"{A}/blockstates/plan_corridor.json", {"variants": {"": {"model": "partydungeon:block/plan_corridor"}}})
+
 # 名前
 for lang, idx in (("ja_jp", 1), ("en_us", 2)):
     p = f"{A}/lang/{lang}.json"; j = json.load(open(p, encoding="utf-8"))
     j["block.partydungeon.arrow_trap"] = "矢の発射台" if idx == 1 else "Arrow Trap"
     for f in FLOORS: j[f"block.partydungeon.{f[0]}"] = f[idx]
+    j["block.partydungeon.crumble_floor"] = "崩れる床" if idx == 1 else "Crumbling Floor"
+    j["block.partydungeon.fall_return"] = "落下リターンブロック" if idx == 1 else "Fall Return Block"
+    j["block.partydungeon.plan_corridor"] = "間取りブロック（通路）" if idx == 1 else "Plan Block (Corridor)"
+    j["block.partydungeon.plan_room"] = "間取りブロック（部屋）" if idx == 1 else "Plan Block (Room)"
     wj(p, j)

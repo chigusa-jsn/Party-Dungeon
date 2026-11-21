@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "stage=0": {
+      "model": "partydungeon:block/crumble_floor_0"
+    },
+    "stage=1": {
+      "model": "partydungeon:block/crumble_floor_1"
+    },
+    "stage=2": {
+      "model": "partydungeon:block/empty"
+    }
+  }
+}

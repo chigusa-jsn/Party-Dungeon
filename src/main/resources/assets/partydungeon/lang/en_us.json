@@ -7,7 +7,7 @@
   "block.partydungeon.spawner_marker": "Mob Spawn Marker",
   "block.partydungeon.goal_marker": "Goal Marker",
   "block.partydungeon.reward_marker": "Reward Chest",
-  "block.partydungeon.plan_room": "Plan Block (Room/Corridor)",
+  "block.partydungeon.plan_room": "Plan Block (Room)",
   "block.partydungeon.plan_start": "Plan Block (Start)",
   "item.partydungeon.plan_wand": "Plan Wand",
   "block.partydungeon.plan_boss": "Plan Block (Boss Room)",
@@ -23,5 +23,9 @@
   "block.partydungeon.levitate_floor": "Levitation Floor",
   "block.partydungeon.speed_floor": "Speed Floor",
   "block.partydungeon.jump_floor": "Jump Boost Floor",
-  "block.partydungeon.heal_floor": "Healing Floor"
+  "block.partydungeon.heal_floor": "Healing Floor",
+  "block.partydungeon.spike_floor": "Spike Floor",
+  "block.partydungeon.crumble_floor": "Crumbling Floor",
+  "block.partydungeon.fall_return": "Fall Return Block",
+  "block.partydungeon.plan_corridor": "Plan Block (Corridor)"
 }

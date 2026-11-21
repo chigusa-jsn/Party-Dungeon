@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "partydungeon:block/spike_floor",
+    "side": "partydungeon:block/spike_floor_side",
+    "bottom": "partydungeon:block/spike_floor_side"
+  }
+}
