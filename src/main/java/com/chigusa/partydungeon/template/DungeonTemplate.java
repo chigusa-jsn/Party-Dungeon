@@ -78,6 +78,12 @@ public final class DungeonTemplate {
     /** 目印ブロックは空気にして、markers に集める */
     public static DungeonTemplate capture(ServerLevel level, BlockPos origin, int sizeX, int sizeY, int sizeZ,
             List<Marker> markers) {
+        return capture(level, origin, sizeX, sizeY, sizeZ, markers, false);
+    }
+
+    /** keepMarkers = true なら目印ブロックもそのまま写す（書き出し用） */
+    public static DungeonTemplate capture(ServerLevel level, BlockPos origin, int sizeX, int sizeY, int sizeZ,
+            @Nullable List<Marker> markers, boolean keepMarkers) {
         List<BlockState> palette = new ArrayList<>();
         Map<BlockState, Integer> lookup = new HashMap<>();
         palette.add(Blocks.AIR.defaultBlockState());
@@ -92,7 +98,7 @@ public final class DungeonTemplate {
                 for (int x = 0; x < sizeX; x++) {
                     m.set(origin.getX() + x, origin.getY() + y, origin.getZ() + z);
                     BlockState state = level.getBlockState(m);
-                    if (com.chigusa.partydungeon.registry.PDRegistry.isMarker(state.getBlock())) {
+                    if (!keepMarkers && com.chigusa.partydungeon.registry.PDRegistry.isMarker(state.getBlock())) {
                         BlockEntity mbe = level.getBlockEntity(m);
                         markers.add(new Marker(new BlockPos(x, y, z), state.getBlock(),
                                 mbe == null ? null : mbe.saveWithoutMetadata(level.registryAccess())));
@@ -129,6 +135,12 @@ public final class DungeonTemplate {
     }
 
     public void save(MinecraftServer server, String id) throws IOException {
+        Path path = file(server, id);
+        Files.createDirectories(path.getParent());
+        NbtIo.writeCompressed(toTag(), path);
+    }
+
+    public CompoundTag toTag() {
         CompoundTag t = new CompoundTag();
         t.putInt("version", 1);
         t.putInt("sx", sizeX);
@@ -148,10 +160,7 @@ public final class DungeonTemplate {
             be.add(e);
         });
         t.put("blockEntities", be);
-
-        Path path = file(server, id);
-        Files.createDirectories(path.getParent());
-        NbtIo.writeCompressed(t, path);
+        return t;
     }
 
     @Nullable
@@ -162,6 +171,20 @@ public final class DungeonTemplate {
         }
         try {
             CompoundTag t = NbtIo.readCompressed(path, NbtAccounter.unlimitedHeap());
+            DungeonTemplate tpl = fromTag(t);
+            if (tpl == null) {
+                PartyDungeon.LOGGER.error("[Party Dungeon] 設計図が壊れています: {}", id);
+            }
+            return tpl;
+        } catch (IOException e) {
+            PartyDungeon.LOGGER.error("[Party Dungeon] 設計図を読み込めません: {}", id, e);
+            return null;
+        }
+    }
+
+    @Nullable
+    public static DungeonTemplate fromTag(CompoundTag t) {
+        {
             int sx = t.getInt("sx");
             int sy = t.getInt("sy");
             int sz = t.getInt("sz");
@@ -172,7 +195,6 @@ public final class DungeonTemplate {
             }
             int[] data = t.getIntArray("data");
             if (data.length != sx * sy * sz) {
-                PartyDungeon.LOGGER.error("[Party Dungeon] 設計図が壊れています: {}", id);
                 return null;
             }
             Map<Integer, CompoundTag> bes = new HashMap<>();
@@ -182,9 +204,6 @@ public final class DungeonTemplate {
                 bes.put(e.getInt("i"), e.getCompound("nbt"));
             }
             return new DungeonTemplate(sx, sy, sz, palette, data, bes);
-        } catch (IOException e) {
-            PartyDungeon.LOGGER.error("[Party Dungeon] 設計図を読み込めません: {}", id, e);
-            return null;
         }
     }
 }

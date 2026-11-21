@@ -200,6 +200,62 @@ public final class PDCommands {
                     }
                 })));
 
+        root.then(Commands.literal("export").requires(src -> src.hasPermission(2))
+                .then(Commands.argument("name", StringArgumentType.string())
+                        .suggests((c, sb) -> net.minecraft.commands.SharedSuggestionProvider.suggest(
+                                PDData.get(c.getSource().getServer()).dungeons.values().stream()
+                                        .map(x -> StringArgumentType.escapeIfRequired(x.name)), sb))
+                        .executes(ctx -> exec(ctx, (s, p, c) -> {
+                            DungeonDef d = PDData.get(s).findByName(StringArgumentType.getString(c, "name"));
+                            if (d == null) {
+                                Msg.warn(p, "そのダンジョンはありません。/pd list で確認できます。");
+                                return;
+                            }
+                            java.nio.file.Path f = com.chigusa.partydungeon.workshop.Exporter.export(s, d);
+                            if (f == null) {
+                                Msg.warn(p, "書き出せませんでした。サーバーのログを確認してください。");
+                                return;
+                            }
+                            Msg.ok(p, "「" + d.name + "」を書き出しました: partydungeon/exports/" + f.getFileName());
+                            Msg.info(p, "別のサーバーでは partydungeon/import/ に入れて再起動するか、/pd import で読み込めます。");
+                        }))));
+
+        root.then(Commands.literal("import").requires(src -> src.hasPermission(2))
+                .then(Commands.argument("file", StringArgumentType.greedyString())
+                        .suggests((c, sb) -> net.minecraft.commands.SharedSuggestionProvider.suggest(
+                                com.chigusa.partydungeon.workshop.Exporter.candidates().stream()
+                                        .map(f -> f.getFileName().toString()), sb))
+                        .executes(ctx -> exec(ctx, (s, p, c) -> {
+                            java.nio.file.Path f = com.chigusa.partydungeon.workshop.Exporter.find(
+                                    StringArgumentType.getString(c, "file"));
+                            if (f == null) {
+                                Msg.warn(p, "ファイルが見つかりません。partydungeon/import/ か exports/ に .pdd を置いてください。");
+                                return;
+                            }
+                            com.chigusa.partydungeon.workshop.Exporter.Result r =
+                                    com.chigusa.partydungeon.workshop.Exporter.importFile(s, f, p.getUUID(), false);
+                            if (r.def() == null) {
+                                Msg.warn(p, r.message());
+                            } else {
+                                Msg.ok(p, r.message());
+                                Msg.info(p, "作業場に建物を建てています。/pd goto \"" + r.def().name + "\" で見に行けます。");
+                            }
+                        }))));
+
+        root.then(Commands.literal("ranking").requires(src -> src.hasPermission(2))
+                .then(Commands.literal("reset")
+                        .then(Commands.argument("name", StringArgumentType.string())
+                                .executes(ctx -> exec(ctx, (s, p, c) -> {
+                                    DungeonDef d = PDData.get(s).findByName(StringArgumentType.getString(c, "name"));
+                                    if (d == null) {
+                                        Msg.warn(p, "そのダンジョンはありません。");
+                                        return;
+                                    }
+                                    PDData.get(s).rankings.remove(d.id);
+                                    PDData.get(s).setDirty();
+                                    Msg.ok(p, "「" + d.name + "」のランキングを消しました。");
+                                })))));
+
         root.then(Commands.literal("goto").requires(src -> src.hasPermission(2))
                 .then(Commands.argument("name", StringArgumentType.string())
                         .executes(ctx -> exec(ctx, (s, p, c) -> {
@@ -309,6 +365,7 @@ public final class PDCommands {
         Msg.info(p, "/pd clear boss|all|goal ： クリア条件");
         Msg.info(p, "/pd npc [名前] ： 受付の村人を置く ／ /pd npc remove ： 近くの受付を消す");
         Msg.info(p, "/pd info ／ publish ／ unpublish ／ rename ／ list ／ goto <名前> ／ rooms");
+        Msg.info(p, "/pd export <名前> ／ import <ファイル> ／ ranking reset <名前>");
     }
 
     private PDCommands() {

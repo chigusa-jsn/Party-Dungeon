@@ -93,6 +93,10 @@ public final class RunManager {
         final DungeonTemplate tpl;
         public final Room room;
         public final Set<UUID> members = new LinkedHashSet<>();
+        /** 最初に入ったメンバー（ランキングと待ち時間用。途中で倒れても残す） */
+        public final List<UUID> roster = new ArrayList<>();
+        /** 製作者のテストプレイ（ランキング・待ち時間なし） */
+        public boolean test;
         public State state = State.PREPARING;
         long startTick;
         long clearTick;
@@ -130,6 +134,79 @@ public final class RunManager {
     private static final Map<UUID, int[]> SAVED_XP = new HashMap<>();
     private static final Map<UUID, Float> SAVED_XP_PROGRESS = new HashMap<>();
     private static int tickCounter;
+
+    /** 順番待ち（部屋が空くのを待っているパーティ） */
+    public record Waiting(UUID leader, String dungeonId, com.chigusa.partydungeon.data.Difficulty difficulty,
+            boolean test) {
+    }
+
+    private static final List<Waiting> QUEUE = new ArrayList<>();
+
+    /** 順番待ちの何番目か（1〜）。並んでいなければ 0 */
+    public static int queuePos(UUID leader) {
+        for (int i = 0; i < QUEUE.size(); i++) {
+            if (QUEUE.get(i).leader().equals(leader)) {
+                return i + 1;
+            }
+        }
+        return 0;
+    }
+
+    public static int queueSize() {
+        return QUEUE.size();
+    }
+
+    /** 順番待ちをやめる */
+    public static boolean cancelQueue(UUID leader) {
+        return QUEUE.removeIf(w -> w.leader().equals(leader));
+    }
+
+    /** 部屋が空いていれば、先頭のパーティから始める */
+    private static void tickQueue(MinecraftServer server) {
+        while (!QUEUE.isEmpty()) {
+            Waiting w = QUEUE.get(0);
+            ServerPlayer leader = server.getPlayerList().getPlayer(w.leader());
+            DungeonDef d = PDData.get(server).dungeons.get(w.dungeonId());
+            if (leader == null || d == null || !d.published || !PartyManager.canLead(w.leader())
+                    || isInRun(w.leader())) {
+                QUEUE.remove(0);
+                if (leader != null) {
+                    Msg.warn(leader, "順番待ちが取り消されました。");
+                }
+                continue;
+            }
+            if (findRoom(d) == null) {
+                return;
+            }
+            QUEUE.remove(0);
+            Msg.ok(leader, "部屋が空きました！「" + d.name + "」を始めます。");
+            start(server, leader, d, w.difficulty(), w.test());
+            for (int i = 0; i < QUEUE.size(); i++) {
+                ServerPlayer next = server.getPlayerList().getPlayer(QUEUE.get(i).leader());
+                if (next != null) {
+                    next.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                            "順番待ち: あと " + (i + 1) + " 組"), true);
+                }
+            }
+            return;
+        }
+    }
+
+    /** 空いている部屋（このダンジョンの同時上限も見る）。なければ null */
+    @Nullable
+    private static Room findRoom(DungeonDef d) {
+        int cap = PDConfig.ROOMS_PER_DUNGEON.get();
+        if (cap > 0 && activeCount(d.id) >= cap) {
+            return null;
+        }
+        int max = PDConfig.ROOM_COUNT.get();
+        for (Room r : rooms()) {
+            if (r.index < max && r.isFree()) {
+                return r;
+            }
+        }
+        return null;
+    }
 
     // ------------------------------------------------------------------ 参照
 
@@ -237,6 +314,11 @@ public final class RunManager {
 
     public static void start(MinecraftServer server, ServerPlayer leader, DungeonDef stored,
             com.chigusa.partydungeon.data.Difficulty difficulty) {
+        start(server, leader, stored, difficulty, false);
+    }
+
+    public static void start(MinecraftServer server, ServerPlayer leader, DungeonDef stored,
+            com.chigusa.partydungeon.data.Difficulty difficulty, boolean test) {
         if (!PartyManager.canLead(leader.getUUID())) {
             Msg.warn(leader, "ダンジョンを選べるのはパーティのリーダーだけです。");
             return;
@@ -253,23 +335,30 @@ public final class RunManager {
                 return;
             }
         }
-        int cap = PDConfig.ROOMS_PER_DUNGEON.get();
-        if (cap > 0 && activeCount(stored.id) >= cap) {
-            Msg.warn(leader, "このダンジョンは今、同時に遊べる上限（" + cap + "部屋）に達しています。少し待ってください。");
-            return;
-        }
-        Room room = null;
-        int max = PDConfig.ROOM_COUNT.get();
-        for (Room r : rooms()) {
-            if (r.index < max && r.isFree()) {
-                room = r;
-                break;
+        if (!test) {
+            for (ServerPlayer p : members) {
+                long left = data.cooldownLeft(p.getUUID(), stored.id);
+                if (left > 0) {
+                    Msg.warn(leader, p.getName().getString() + " さんは、このダンジョンにあと "
+                            + Msg.formatWait(left) + " 挑めません（再挑戦の待ち時間）。");
+                    return;
+                }
             }
         }
+        Room room = findRoom(stored);
         if (room == null) {
-            Msg.warn(leader, "全部の部屋が使用中です。少し待ってから、もう一度選んでください。");
+            int pos = queuePos(leader.getUUID());
+            if (pos == 0) {
+                cancelQueue(leader.getUUID());
+                QUEUE.add(new Waiting(leader.getUUID(), stored.id, difficulty, test));
+                pos = QUEUE.size();
+            }
+            for (ServerPlayer p : members) {
+                Msg.info(p, "部屋が満員なので、順番待ちに並びました（" + pos + " 番目）。空いたら自動で始まります。");
+            }
             return;
         }
+        cancelQueue(leader.getUUID());
         DungeonTemplate tpl = DungeonTemplate.load(server, stored.id);
         if (tpl == null) {
             Msg.warn(leader, "ダンジョンの設計図が見つかりません。作った人に、もう一度公開（/pd publish）してもらってください。");
@@ -282,9 +371,11 @@ public final class RunManager {
         }
 
         Run run = new Run(stored.copy(), difficulty, tpl, room);
+        run.test = test;
         room.run = run;
         for (ServerPlayer p : members) {
             run.members.add(p.getUUID());
+            run.roster.add(p.getUUID());
             BY_PLAYER.put(p.getUUID(), run);
             Msg.info(p, "「" + stored.name + "」の部屋 " + (room.index + 1) + " 番を準備しています…");
         }
@@ -337,6 +428,7 @@ public final class RunManager {
         if (++tickCounter % 10 != 0) {
             return;
         }
+        tickQueue(server);
         ServerLevel arena = arena(server);
         if (arena == null) {
             return;
@@ -381,13 +473,17 @@ public final class RunManager {
             run.clearTick = now;
             int delay = PDConfig.RETURN_DELAY_SECONDS.get();
             run.returnTick = now + delay * 20L;
-            String time = Msg.formatTicks(now - run.startTick);
+            String time = Msg.formatTime(now - run.startTick);
+            int rank = run.test ? 0 : recordRanking(server, run, now - run.startTick);
             boolean first = true;
             for (ServerPlayer p : online) {
                 // jsn-Craft の依頼・スマホのお知らせ（入っていれば）
                 com.chigusa.partydungeon.api.PDApi.cleared(p, run.def, run.difficulty.id, run.difficulty.label, first);
                 first = false;
                 Msg.ok(p, "★ クリア！【" + run.difficulty.label + "】タイム " + time + "  " + delay + " 秒後に元の場所へ戻ります。");
+                if (rank > 0) {
+                    Msg.ok(p, "ランキング " + rank + " 位に入りました！【" + run.difficulty.label + "】");
+                }
                 rollRewards(server, run, p);
                 p.playNotifySound(SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.MASTER, 1f, 1f);
             }
@@ -570,6 +666,15 @@ public final class RunManager {
 
     /** 挑戦を終わらせて、全員を戻し、部屋を片付ける */
     public static void finish(MinecraftServer server, Run run, boolean cleared) {
+        if (!run.test && run.state != State.PREPARING) {
+            int minutes = PDConfig.RETRY_COOLDOWN_MINUTES.get();
+            if (minutes > 0) {
+                long until = System.currentTimeMillis() + minutes * 60_000L;
+                for (UUID id : run.roster) {
+                    PDData.get(server).setCooldown(id, run.def.id, until);
+                }
+            }
+        }
         PartyDungeon.LOGGER.info("[Party Dungeon] 部屋{} 「{}」終了（{}）", run.room.index + 1, run.def.name,
                 cleared ? "クリア" : "中断");
         PDData data = PDData.get(server);
@@ -734,7 +839,23 @@ public final class RunManager {
         Msg.info(p, "ダンジョンで倒れたので、元の場所に戻りました。");
     }
 
+    /** クリアの記録をランキングに入れる。順位（入らなければ 0） */
+    private static int recordRanking(MinecraftServer server, Run run, long ticks) {
+        List<UUID> ids = new ArrayList<>();
+        List<String> names = new ArrayList<>();
+        for (UUID id : run.roster) {
+            if (ids.size() >= com.chigusa.partydungeon.data.RankEntry.MAX_MEMBERS) {
+                break;
+            }
+            ids.add(id);
+            names.add(PartyManager.nameOf(server, id));
+        }
+        return PDData.get(server).record(run.def.id, run.difficulty.id,
+                new com.chigusa.partydungeon.data.RankEntry(ticks, ids, names, System.currentTimeMillis()));
+    }
+
     public static void onLogout(MinecraftServer server, ServerPlayer p) {
+        cancelQueue(p.getUUID());
         Run run = BY_PLAYER.remove(p.getUUID());
         if (run == null) {
             return;
@@ -786,6 +907,7 @@ public final class RunManager {
 
     public static void reset() {
         ROOMS.clear();
+        QUEUE.clear();
         BY_PLAYER.clear();
         BY_MOB.clear();
         SAVED_INV.clear();

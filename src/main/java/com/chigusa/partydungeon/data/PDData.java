@@ -33,6 +33,10 @@ public final class PDData extends SavedData {
     public final Map<Integer, int[]> dirtyRooms = new HashMap<>();
     /** プレイヤーごとの、解放したダンジョン（ID） */
     public final Map<UUID, java.util.Set<String>> unlocked = new HashMap<>();
+    /** ランキング：ダンジョンID → 難易度ID → 上位（速い順） */
+    public final Map<String, Map<String, java.util.List<RankEntry>>> rankings = new HashMap<>();
+    /** 再挑戦の待ち時間：プレイヤー → ダンジョンID → 挑めるようになる時刻（ミリ秒） */
+    public final Map<UUID, Map<String, Long>> cooldowns = new HashMap<>();
     public int nextPlot;
     public int nextId = 1;
 
@@ -80,6 +84,44 @@ public final class PDData extends SavedData {
         return null;
     }
 
+    public java.util.List<RankEntry> ranking(String dungeonId, String diffId) {
+        return rankings.getOrDefault(dungeonId, Map.of()).getOrDefault(diffId, java.util.List.of());
+    }
+
+    /** クリアの記録を入れる。上位に入れば順位（1〜）、入らなければ 0 */
+    public int record(String dungeonId, String diffId, RankEntry e) {
+        java.util.List<RankEntry> list = new java.util.ArrayList<>(ranking(dungeonId, diffId));
+        for (RankEntry old : list) {
+            if (old.sameTeam(e.ids())) {
+                if (old.ticks() <= e.ticks()) {
+                    return 0;
+                }
+                list.remove(old);
+                break;
+            }
+        }
+        list.add(e);
+        list.sort(java.util.Comparator.comparingLong(RankEntry::ticks).thenComparingLong(RankEntry::when));
+        while (list.size() > RankEntry.KEEP) {
+            list.remove(list.size() - 1);
+        }
+        rankings.computeIfAbsent(dungeonId, k -> new HashMap<>()).put(diffId, list);
+        setDirty();
+        int rank = list.indexOf(e);
+        return rank < 0 ? 0 : rank + 1;
+    }
+
+    /** あと何ミリ秒待つ必要があるか（0 = すぐ挑める） */
+    public long cooldownLeft(UUID player, String dungeonId) {
+        Long until = cooldowns.getOrDefault(player, Map.of()).get(dungeonId);
+        return until == null ? 0 : Math.max(0, until - System.currentTimeMillis());
+    }
+
+    public void setCooldown(UUID player, String dungeonId, long until) {
+        cooldowns.computeIfAbsent(player, k -> new HashMap<>()).put(dungeonId, until);
+        setDirty();
+    }
+
     @Override
     public CompoundTag save(CompoundTag tag, HolderLookup.Provider registries) {
         ListTag list = new ListTag();
@@ -106,6 +148,27 @@ public final class PDData extends SavedData {
             un.put(id.toString(), l);
         });
         tag.put("unlocked", un);
+        CompoundTag rk = new CompoundTag();
+        rankings.forEach((did, byDiff) -> {
+            CompoundTag dt = new CompoundTag();
+            byDiff.forEach((diff, entries) -> {
+                ListTag l = new ListTag();
+                for (RankEntry e : entries) l.add(e.save());
+                dt.put(diff, l);
+            });
+            rk.put(did, dt);
+        });
+        tag.put("rankings", rk);
+        CompoundTag cd = new CompoundTag();
+        long now = System.currentTimeMillis();
+        cooldowns.forEach((pid, m) -> {
+            CompoundTag pt = new CompoundTag();
+            m.forEach((did, until) -> {
+                if (until > now) pt.putLong(did, until);
+            });
+            if (!pt.isEmpty()) cd.put(pid.toString(), pt);
+        });
+        tag.put("cooldowns", cd);
         tag.putInt("nextPlot", nextPlot);
         tag.putInt("nextId", nextId);
         return tag;
@@ -149,6 +212,29 @@ public final class PDData extends SavedData {
                 java.util.Set<String> set = new java.util.LinkedHashSet<>();
                 for (int i = 0; i < l.size(); i++) set.add(l.getString(i));
                 data.unlocked.put(UUID.fromString(key), set);
+            } catch (IllegalArgumentException ignored) {
+                // 読み飛ばす
+            }
+        }
+        CompoundTag rk = tag.getCompound("rankings");
+        for (String did : rk.getAllKeys()) {
+            CompoundTag dt = rk.getCompound(did);
+            Map<String, java.util.List<RankEntry>> byDiff = new HashMap<>();
+            for (String diff : dt.getAllKeys()) {
+                ListTag l = dt.getList(diff, Tag.TAG_COMPOUND);
+                java.util.List<RankEntry> entries = new java.util.ArrayList<>();
+                for (int i = 0; i < l.size(); i++) entries.add(RankEntry.load(l.getCompound(i)));
+                byDiff.put(diff, entries);
+            }
+            data.rankings.put(did, byDiff);
+        }
+        CompoundTag cd = tag.getCompound("cooldowns");
+        for (String key : cd.getAllKeys()) {
+            try {
+                CompoundTag pt = cd.getCompound(key);
+                Map<String, Long> m = new HashMap<>();
+                for (String did : pt.getAllKeys()) m.put(did, pt.getLong(did));
+                data.cooldowns.put(UUID.fromString(key), m);
             } catch (IllegalArgumentException ignored) {
                 // 読み飛ばす
             }

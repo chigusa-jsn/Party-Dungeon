@@ -116,7 +116,11 @@ public final class Menus {
                         "解放した人がリーダーなら、いっしょに挑めます"), null);
                 continue;
             }
-            b.button(i, dungeonIcon(d, "クリックでロビーへ"), pl -> {
+            b.button2(i, dungeonIcon(server, d, "左クリック: ロビーへ  右クリック: ランキング"), (pl, button) -> {
+                if (button == 1) {
+                    ranking(server, pl, id, com.chigusa.partydungeon.data.Difficulty.NORMAL, pg);
+                    return;
+                }
                 if (!PartyManager.canLead(pl.getUUID())) {
                     Msg.warn(pl, "ダンジョンを選べるのはリーダーだけです。");
                     lobby(server, pl);
@@ -145,7 +149,7 @@ public final class Menus {
 
         // 選んだダンジョン
         if (d != null && d.published) {
-            b.button(4, dungeonIcon(d, leader ? "クリックで選び直す" : "リーダーが選んだダンジョン"),
+            b.button(4, dungeonIcon(server, d, leader ? "クリックで選び直す" : "リーダーが選んだダンジョン"),
                     leader ? pl -> dungeonList(server, pl, 0) : null);
         } else {
             b.button(4, icon(Items.MAP, "ダンジョンが選ばれていません", ChatFormatting.GRAY,
@@ -225,6 +229,15 @@ public final class Menus {
                         PartyManager.setRecruiting(server, pl, !rec, d.name);
                         lobby(server, pl);
                     });
+            int qpos = RunManager.queuePos(p.getUUID());
+            if (qpos > 0) {
+                b.button(42, icon(Items.CLOCK, "順番待ち中（" + qpos + " 番目）", ChatFormatting.YELLOW,
+                        "部屋が空いたら自動で始まります", "クリックで順番待ちをやめる"), pl -> {
+                            RunManager.cancelQueue(pl.getUUID());
+                            Msg.info(pl, "順番待ちをやめました。");
+                            lobby(server, pl);
+                        });
+            } else
             b.button(42, icon(Items.EMERALD_BLOCK, "スタート！", ChatFormatting.GREEN,
                     d == null ? "先にダンジョンを選んでください" : "パーティ全員で「" + d.name + "」に入ります"), pl -> {
                         if (d == null) {
@@ -412,6 +425,76 @@ public final class Menus {
 
     private static ItemStack back() {
         return icon(Items.SPRUCE_DOOR, "戻る", ChatFormatting.GRAY);
+    }
+
+    private static final Item[] RANK_ICONS = {Items.GOLD_BLOCK, Items.IRON_BLOCK, Items.COPPER_BLOCK,
+            Items.OAK_PLANKS, Items.OAK_PLANKS};
+
+    /** ランキング画面：1位〜5位を1段ずつ。左の数字の段にタイム、右にメンバーの顔 */
+    public static void ranking(MinecraftServer server, ServerPlayer p, String dungeonId,
+            com.chigusa.partydungeon.data.Difficulty diff, int backPage) {
+        DungeonDef d = PDData.get(server).dungeons.get(dungeonId);
+        if (d == null) {
+            dungeonList(server, p, backPage);
+            return;
+        }
+        ButtonMenu.Builder b = new ButtonMenu.Builder(Component.literal("ランキング: " + d.name), 6);
+        List<com.chigusa.partydungeon.data.RankEntry> list = PDData.get(server).ranking(d.id, diff.id);
+        java.text.SimpleDateFormat fmt = new java.text.SimpleDateFormat("yyyy/MM/dd HH:mm");
+        for (int r = 0; r < com.chigusa.partydungeon.data.RankEntry.KEEP; r++) {
+            int row = r * 9;
+            if (r >= list.size()) {
+                b.button(row, icon(Items.LIGHT_GRAY_STAINED_GLASS_PANE, (r + 1) + "位  ---", ChatFormatting.DARK_GRAY,
+                        "まだ記録がありません"), null);
+                continue;
+            }
+            com.chigusa.partydungeon.data.RankEntry e = list.get(r);
+            ChatFormatting color = r == 0 ? ChatFormatting.GOLD : r == 1 ? ChatFormatting.WHITE
+                    : r == 2 ? ChatFormatting.RED : ChatFormatting.GRAY;
+            b.button(row, icon(RANK_ICONS[r], (r + 1) + "位  " + Msg.formatTime(e.ticks()), color,
+                    e.ids().size() + " 人", fmt.format(new java.util.Date(e.when()))), null);
+            b.button(row + 1, icon(Items.CLOCK, Msg.formatTime(e.ticks()), color), null);
+            for (int m = 0; m < e.ids().size() && m < 5; m++) {
+                String name = m < e.names().size() ? e.names().get(m) : "?";
+                b.button(row + 3 + m, headOf(e.ids().get(m), name), null);
+            }
+        }
+        b.button(45, back(), pl -> dungeonList(server, pl, backPage));
+        b.button2(49, icon(diff.icon, "難易度: " + diff.label, diff.color, "左クリック: 次へ  右クリック: 前へ"),
+                (pl, button) -> ranking(server, pl, dungeonId, button == 1 ? diff.prev() : diff.next(), backPage));
+        b.open(p);
+    }
+
+    /** オフラインの人の顔も出せるように、ID と名前から顔を作る */
+    private static ItemStack headOf(UUID id, String name) {
+        ItemStack stack = new ItemStack(Items.PLAYER_HEAD);
+        stack.set(DataComponents.PROFILE, new ResolvableProfile(new com.mojang.authlib.GameProfile(id, name)));
+        return named(stack, name, ChatFormatting.WHITE);
+    }
+
+    private static ItemStack dungeonIcon(MinecraftServer server, DungeonDef d, String action) {
+        ItemStack stack = dungeonIcon(d, action);
+        List<Component> lines = new ArrayList<>();
+        ItemLore old = stack.get(DataComponents.LORE);
+        if (old != null) {
+            lines.addAll(old.lines());
+        }
+        List<Component> best = new ArrayList<>();
+        for (com.chigusa.partydungeon.data.Difficulty diff : com.chigusa.partydungeon.data.Difficulty.values()) {
+            List<com.chigusa.partydungeon.data.RankEntry> list = PDData.get(server).ranking(d.id, diff.id);
+            if (list.isEmpty()) {
+                continue;
+            }
+            com.chigusa.partydungeon.data.RankEntry top = list.get(0);
+            best.add(Component.literal(" " + diff.label + " " + Msg.formatTime(top.ticks()) + "  "
+                    + String.join("、", top.names())).withStyle(s -> s.withItalic(false).withColor(diff.color)));
+        }
+        if (!best.isEmpty()) {
+            best.add(0, Component.literal("★ 1位の記録").withStyle(s -> s.withItalic(false).withColor(ChatFormatting.GOLD)));
+            lines.addAll(Math.max(0, lines.size() - 1), best);
+        }
+        stack.set(DataComponents.LORE, new ItemLore(lines));
+        return stack;
     }
 
     private static ItemStack dungeonIcon(DungeonDef d, String action) {

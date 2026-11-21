@@ -31,6 +31,7 @@ public final class PDEvents {
         bus.addListener((RegisterCommandsEvent e) -> PDCommands.register(e.getDispatcher(), e.getBuildContext()));
         bus.addListener((ServerStartedEvent e) -> {
             RunManager.onServerStarted(e.getServer());
+            com.chigusa.partydungeon.workshop.Exporter.autoImport(e.getServer());
             if (Boolean.getBoolean("partydungeon.selftest")) {
                 boolean ok = e.getServer().getLevel(PDDimensions.WORKSHOP) != null
                         && e.getServer().getLevel(PDDimensions.ARENA) != null;

@@ -38,6 +38,19 @@ public final class Msg {
         p.sendSystemMessage(warn(text));
     }
 
+    /** ランキング用：分:秒.百分の一秒 */
+    public static String formatTime(long ticks) {
+        long cs = ticks * 5;
+        long sec = cs / 100;
+        return String.format("%d:%02d.%02d", sec / 60, sec % 60, cs % 100);
+    }
+
+    /** 残り時間（ミリ秒）を「7分12秒」の形に */
+    public static String formatWait(long ms) {
+        long sec = (ms + 999) / 1000;
+        return sec >= 60 ? (sec / 60) + "分" + (sec % 60) + "秒" : sec + "秒";
+    }
+
     public static String formatTicks(long ticks) {
         long sec = ticks / 20;
         return String.format("%d:%02d", sec / 60, sec % 60);

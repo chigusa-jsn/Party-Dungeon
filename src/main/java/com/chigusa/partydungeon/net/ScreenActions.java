@@ -164,7 +164,7 @@ public final class ScreenActions {
                 WorkshopManager.publish(server, p, d);
                 if (d.published && d.validate() == null) {
                     Difficulty diff = Difficulty.byId(data.getString("difficulty"));
-                    RunManager.start(server, p, d, diff);
+                    RunManager.start(server, p, d, diff, true);
                 }
             }
             case "unpublish" -> {
