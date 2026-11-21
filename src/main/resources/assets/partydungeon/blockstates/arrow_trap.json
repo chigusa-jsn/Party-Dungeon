@@ -1,0 +1,26 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "partydungeon:block/arrow_trap"
+    },
+    "facing=east": {
+      "model": "partydungeon:block/arrow_trap",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "partydungeon:block/arrow_trap",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "partydungeon:block/arrow_trap",
+      "y": 270
+    },
+    "facing=up": {
+      "model": "partydungeon:block/arrow_trap_vertical"
+    },
+    "facing=down": {
+      "model": "partydungeon:block/arrow_trap_vertical",
+      "x": 180
+    }
+  }
+}

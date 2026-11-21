@@ -26,6 +26,7 @@ public final class PDEvents {
 
     public static void register() {
         var bus = NeoForge.EVENT_BUS;
+        bus.addListener(com.chigusa.partydungeon.trap.EffectFloorBlock::onPlayerTick);
         bus.addListener((RegisterCommandsEvent e) -> PDCommands.register(e.getDispatcher(), e.getBuildContext()));
         bus.addListener((ServerStartedEvent e) -> {
             RunManager.onServerStarted(e.getServer());

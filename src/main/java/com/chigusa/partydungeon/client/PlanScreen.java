@@ -1,6 +1,10 @@
 package com.chigusa.partydungeon.client;
 
+import com.chigusa.partydungeon.data.Theme;
 import com.chigusa.partydungeon.net.PDNetwork;
+
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
@@ -20,6 +24,7 @@ public class PlanScreen extends PDScreen {
     private EditBox scale;
     private EditBox corridor;
     private EditBox heightBox;
+    private String theme = "stone";
 
     public PlanScreen(CompoundTag data) {
         super("間取りから部屋を作る");
@@ -40,8 +45,13 @@ public class PlanScreen extends PDScreen {
         scale = row(x, y + 26, 8, 3, 64);
         corridor = row(x, y + 52, 3, 1, 64);
         heightBox = row(x, y + 78, 7, 5, 160);
-        button("作る", x, y + 130, 126, 20, b -> {
+        addRenderableWidget(Button.builder(Component.literal(Theme.byId(theme).label), b -> {
+            theme = Theme.next(theme).id;
+            b.setMessage(Component.literal(Theme.byId(theme).label));
+        }).bounds(x + 110, y + 104, 150, 20).build());
+        button("作る", x, y + 156, 126, 20, b -> {
             CompoundTag t = new CompoundTag();
+            t.putString("theme", theme);
             t.putLong("pos", pos);
             t.putString("name", name.getValue());
             t.putInt("scale", parse(scale, 8, 3, 64));
@@ -50,7 +60,7 @@ public class PlanScreen extends PDScreen {
             PDNetwork.sendAction("plan", "build", t);
             onClose();
         });
-        button("キャンセル", x + 134, y + 130, 126, 20, b -> onClose());
+        button("キャンセル", x + 134, y + 156, 126, 20, b -> onClose());
         setInitialFocus(name);
     }
 
@@ -74,6 +84,8 @@ public class PlanScreen extends PDScreen {
         text(g, "1マスの大きさ", x, y + 31, WHITE);
         text(g, "通路の幅", x, y + 57, WHITE);
         text(g, "高さ（床〜天井）", x, y + 83, WHITE);
+        text(g, "見た目（フィールド）", x, y + 109, WHITE);
+        text(g, "押すと切り替わります", x + 264, y + 109, GRAY);
         int s = parse(scale, 8, 3, 64);
         int size = Math.max(w, h) * s + 2;
         text(g, "→ 1マス = " + s + "×" + s + " ブロック", x + 204, y + 31, GRAY);
@@ -83,6 +95,6 @@ public class PlanScreen extends PDScreen {
         }
         boolean ok = size <= maxSize;
         text(g, "できあがりの広さ: 約 " + size + " × " + size + " ブロック" + (ok ? "" : "（大きすぎます。最大 " + maxSize + "）"),
-                x, y + 106, ok ? GREEN : RED);
+                x, y + 134, ok ? GREEN : RED);
     }
 }

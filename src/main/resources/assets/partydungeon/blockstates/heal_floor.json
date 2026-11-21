@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "partydungeon:block/heal_floor"
+    }
+  }
+}

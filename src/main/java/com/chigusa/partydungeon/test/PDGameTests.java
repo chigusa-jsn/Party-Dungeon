@@ -56,7 +56,7 @@ public final class PDGameTests {
         DungeonDef d = new DungeonDef("test1", "テスト", id, 900, 16, 8);
         d.clear = ClearCondition.ALL;
         data.dungeons.put(d.id, d);
-        BlockJobs.runNow(BlockJobs.frame(ws, d.plotOrigin(), 16, 8, Blocks.STONE_BRICKS.defaultBlockState(), null));
+        BlockJobs.runNow(BlockJobs.frame(ws, d.plotOrigin(), 16, 8, com.chigusa.partydungeon.data.Theme.single(Blocks.STONE_BRICKS.defaultBlockState()), null));
         helper.assertTrue(ws.getBlockState(d.plotOrigin()).is(Blocks.STONE_BRICKS), "外枠の床ができていない");
         helper.assertTrue(ws.getBlockState(d.plotOrigin().offset(5, 3, 5)).isAir(), "外枠の中が空気になっていない");
         helper.assertTrue(ws.getBlockState(d.plotOrigin().offset(5, 7, 5)).is(Blocks.STONE_BRICKS), "天井ができていない");
@@ -166,7 +166,7 @@ public final class PDGameTests {
                 "間取りの読み取りがおかしい: " + (plan == null ? null : plan.w() + "x" + plan.h() + " " + plan.cellCount()));
         helper.assertTrue(plan.start() != null && plan.start()[0] == 0 && plan.start()[1] == 0, "スタートの位置がおかしい");
         com.chigusa.partydungeon.workshop.PlanBuilder.build(server, player, plan, "間取りテスト", 8, 3, 7,
-                Blocks.STONE_BRICKS.defaultBlockState());
+                com.chigusa.partydungeon.data.Theme.single(Blocks.STONE_BRICKS.defaultBlockState()));
         DungeonDef d = PDData.get(server).findByName("間取りテスト");
         helper.assertTrue(d != null && d.size == 7 * 8 + 2, "ダンジョンが作られていない");
         helper.startSequence()
@@ -215,7 +215,7 @@ public final class PDGameTests {
                 com.chigusa.partydungeon.workshop.PlanBuilder.read(ws, base.offset(4, 0, 1));
         helper.assertTrue(plan != null && plan.hasBoss() && plan.cellCount() == 12, "ボスの間取りが読めない");
         com.chigusa.partydungeon.workshop.PlanBuilder.build(server, player, plan, "ボステスト", 8, 3, 7,
-                Blocks.STONE_BRICKS.defaultBlockState());
+                com.chigusa.partydungeon.data.Theme.single(Blocks.STONE_BRICKS.defaultBlockState()));
         DungeonDef d = PDData.get(server).findByName("ボステスト");
         helper.assertTrue(d != null && d.height == 20, "ボス部屋の高さが20になっていない");
         helper.startSequence()
@@ -255,7 +255,7 @@ public final class PDGameTests {
         DungeonDef d = new DungeonDef("test_death", "死亡テスト", normal.getUUID(), 950, 16, 8);
         d.clear = ClearCondition.GOAL;
         data.dungeons.put(d.id, d);
-        BlockJobs.runNow(BlockJobs.frame(ws, d.plotOrigin(), 16, 8, Blocks.STONE_BRICKS.defaultBlockState(), null));
+        BlockJobs.runNow(BlockJobs.frame(ws, d.plotOrigin(), 16, 8, com.chigusa.partydungeon.data.Theme.single(Blocks.STONE_BRICKS.defaultBlockState()), null));
         ws.setBlockAndUpdate(d.plotOrigin().offset(8, 1, 8),
                 com.chigusa.partydungeon.registry.PDRegistry.START_MARKER.get().defaultBlockState());
         ws.setBlockAndUpdate(d.plotOrigin().offset(2, 1, 2),

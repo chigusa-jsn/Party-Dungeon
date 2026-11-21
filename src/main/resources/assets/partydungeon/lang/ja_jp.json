@@ -10,5 +10,18 @@
   "block.partydungeon.plan_room": "間取りブロック（部屋・通路）",
   "block.partydungeon.plan_start": "間取りブロック（スタート）",
   "item.partydungeon.plan_wand": "間取りの杖",
-  "block.partydungeon.plan_boss": "間取りブロック（ボス部屋）"
+  "block.partydungeon.plan_boss": "間取りブロック（ボス部屋）",
+  "block.partydungeon.arrow_trap": "矢の発射台",
+  "block.partydungeon.fire_floor": "炎の床",
+  "block.partydungeon.poison_floor": "毒の床",
+  "block.partydungeon.slow_floor": "鈍足の床",
+  "block.partydungeon.weak_floor": "弱体化の床",
+  "block.partydungeon.blind_floor": "暗闇の床",
+  "block.partydungeon.wither_floor": "ウィザーの床",
+  "block.partydungeon.nausea_floor": "混乱の床",
+  "block.partydungeon.hunger_floor": "空腹の床",
+  "block.partydungeon.levitate_floor": "浮遊の床",
+  "block.partydungeon.speed_floor": "加速の床",
+  "block.partydungeon.jump_floor": "ジャンプ強化の床",
+  "block.partydungeon.heal_floor": "回復の床"
 }

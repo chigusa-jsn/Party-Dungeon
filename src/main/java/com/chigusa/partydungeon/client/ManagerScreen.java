@@ -3,6 +3,7 @@ package com.chigusa.partydungeon.client;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.chigusa.partydungeon.data.Theme;
 import com.chigusa.partydungeon.net.PDNetwork;
 
 import net.minecraft.client.gui.GuiGraphics;
@@ -32,6 +33,8 @@ public class ManagerScreen extends PDScreen {
     private int listH;
     private int px;
     private EditBox nameBox;
+    private String themeFor;
+    private String themePick = "stone";
 
     public ManagerScreen(CompoundTag data) {
         super("製作メニュー");
@@ -110,6 +113,21 @@ public class ManagerScreen extends PDScreen {
         y += 24;
         button("クリア条件: " + d.getString("clear"), px, y, half, 20, b -> act("clear"));
         button(d.getBoolean("locked") ? "解放: 依頼で解放" : "解放: 最初から遊べる", px + half + 4, y, half, 20, b -> act("lock"));
+        y += 24;
+        if (!d.getString("id").equals(themeFor)) {
+            themeFor = d.getString("id");
+            themePick = d.getString("theme");
+        }
+        addRenderableWidget(Button.builder(Component.literal("見た目: " + Theme.byId(themePick).label), b -> {
+            themePick = Theme.next(themePick).id;
+            b.setMessage(Component.literal("見た目: " + Theme.byId(themePick).label));
+        }).bounds(px, y, half, 20).build());
+        button("この見た目に着せ替える", px + half + 4, y, half, 20, b -> {
+            CompoundTag t = new CompoundTag();
+            t.putString("id", selected == null ? "" : selected);
+            t.putString("theme", themePick);
+            PDNetwork.sendAction("manager", "theme", t);
+        });
         y += 24;
         button(d.getBoolean("published") ? "もう一度公開（更新）" : "公開する", px, y, half, 20, b -> act("publish"));
         if (d.getBoolean("published")) {
@@ -201,6 +219,7 @@ public class ManagerScreen extends PDScreen {
         private EditBox name;
         private EditBox size;
         private EditBox heightBox;
+        private String theme = "stone";
 
         CreateScreen(ManagerScreen parent) {
             super("空の区画を作る");
@@ -214,15 +233,20 @@ public class ManagerScreen extends PDScreen {
             name = textBox(x + 80, y, 120, "");
             size = numberBox(x + 80, y + 26, 40, 48, null);
             heightBox = numberBox(x + 80, y + 52, 40, 24, null);
-            button("作る", x, y + 84, 96, 20, b -> {
+            addRenderableWidget(Button.builder(Component.literal("見た目: " + Theme.byId(theme).label), b -> {
+                theme = Theme.next(theme).id;
+                b.setMessage(Component.literal("見た目: " + Theme.byId(theme).label));
+            }).bounds(x + 80, y + 78, 120, 20).build());
+            button("作る", x, y + 108, 96, 20, b -> {
                 CompoundTag t = new CompoundTag();
+                t.putString("theme", theme);
                 t.putString("name", name.getValue());
                 t.putInt("size", parse(size, 48, 16, 512));
                 t.putInt("height", parse(heightBox, 24, 8, 160));
                 PDNetwork.sendAction("manager", "create", t);
                 onClose();
             });
-            button("戻る", x + 104, y + 84, 96, 20, b -> minecraft.setScreen(parent));
+            button("戻る", x + 104, y + 108, 96, 20, b -> minecraft.setScreen(parent));
             setInitialFocus(name);
         }
 
@@ -237,6 +261,7 @@ public class ManagerScreen extends PDScreen {
             text(g, "16〜512", x + 126, y + 31, GRAY);
             text(g, "高さ", x, y + 57, WHITE);
             text(g, "8〜160", x + 126, y + 57, GRAY);
+            text(g, "見た目", x, y + 84, WHITE);
         }
     }
 }

@@ -241,7 +241,8 @@ public final class PDCommands {
     private static int create(CommandContext<CommandSourceStack> ctx, int size, int height, BlockState block)
             throws CommandSyntaxException {
         return exec(ctx, (s, p, c) -> WorkshopManager.create(s, p, StringArgumentType.getString(c, "name"), size,
-                height, block == null ? Blocks.STONE_BRICKS.defaultBlockState() : block));
+                height, block == null ? com.chigusa.partydungeon.data.Theme.STONE
+                        : com.chigusa.partydungeon.data.Theme.single(block)));
     }
 
     private static void setGoal(ServerPlayer p, DungeonDef d, int radius) {

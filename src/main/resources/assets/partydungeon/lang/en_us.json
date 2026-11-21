@@ -10,5 +10,18 @@
   "block.partydungeon.plan_room": "Plan Block (Room/Corridor)",
   "block.partydungeon.plan_start": "Plan Block (Start)",
   "item.partydungeon.plan_wand": "Plan Wand",
-  "block.partydungeon.plan_boss": "Plan Block (Boss Room)"
+  "block.partydungeon.plan_boss": "Plan Block (Boss Room)",
+  "block.partydungeon.arrow_trap": "Arrow Trap",
+  "block.partydungeon.fire_floor": "Fire Floor",
+  "block.partydungeon.poison_floor": "Poison Floor",
+  "block.partydungeon.slow_floor": "Slowness Floor",
+  "block.partydungeon.weak_floor": "Weakness Floor",
+  "block.partydungeon.blind_floor": "Blindness Floor",
+  "block.partydungeon.wither_floor": "Wither Floor",
+  "block.partydungeon.nausea_floor": "Nausea Floor",
+  "block.partydungeon.hunger_floor": "Hunger Floor",
+  "block.partydungeon.levitate_floor": "Levitation Floor",
+  "block.partydungeon.speed_floor": "Speed Floor",
+  "block.partydungeon.jump_floor": "Jump Boost Floor",
+  "block.partydungeon.heal_floor": "Healing Floor"
 }

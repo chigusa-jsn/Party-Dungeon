@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "partydungeon:block/heal_floor",
+    "side": "partydungeon:block/heal_floor_side",
+    "bottom": "partydungeon:block/heal_floor_side"
+  }
+}

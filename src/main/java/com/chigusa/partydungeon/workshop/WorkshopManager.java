@@ -151,7 +151,7 @@ public final class WorkshopManager {
 
     /** /pd create：新しい区画を作り、外枠を自動で建てる */
     public static void create(MinecraftServer server, ServerPlayer p, String name, int size, int height,
-            BlockState wall) {
+            com.chigusa.partydungeon.data.Theme theme) {
         ServerLevel ws = workshop(server);
         if (ws == null) {
             Msg.warn(p, "作業場のディメンションが読み込めません。");
@@ -167,13 +167,14 @@ public final class WorkshopManager {
         }
         String id = "d" + data.nextId++;
         DungeonDef d = new DungeonDef(id, name, p.getUUID(), data.allocatePlot(size), size, height);
+        d.theme = theme.id;
         // スタート地点の初期値：床の中央
         d.start = new BlockPos(size / 2, 1, size / 2);
         data.dungeons.put(id, d);
         data.setDirty();
 
         Msg.info(p, "「" + name + "」の区画（" + size + "×" + size + "、高さ" + height + "）を建てています…");
-        BlockJobs.add(BlockJobs.frame(ws, d.plotOrigin(), size, height, wall, () -> {
+        BlockJobs.add(BlockJobs.frame(ws, d.plotOrigin(), size, height, theme, () -> {
             ServerPlayer now = server.getPlayerList().getPlayer(p.getUUID());
             ws.setBlockAndUpdate(d.plotOrigin().offset(d.start),
                     com.chigusa.partydungeon.registry.PDRegistry.START_MARKER.get().defaultBlockState());

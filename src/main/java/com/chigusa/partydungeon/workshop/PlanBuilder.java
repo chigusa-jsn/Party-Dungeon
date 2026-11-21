@@ -285,7 +285,7 @@ public final class PlanBuilder {
 
     /** 間取りから新しいダンジョンを作り、建て始める */
     public static void build(MinecraftServer server, ServerPlayer p, Plan plan, String name, int scale, int corridor,
-            int height, BlockState wall) {
+            int height, com.chigusa.partydungeon.data.Theme theme) {
         ServerLevel ws = WorkshopManager.workshop(server);
         PDData data = PDData.get(server);
         if (name.isBlank()) {
@@ -327,12 +327,13 @@ public final class PlanBuilder {
                 }
             }
         }
+        d.theme = theme.id;
         data.dungeons.put(id, d);
         data.setDirty();
 
         BlockState air = Blocks.AIR.defaultBlockState();
-        BlockState light = Blocks.SEA_LANTERN.defaultBlockState();
-        BlockState bossFloor = Blocks.CHISELED_STONE_BRICKS.defaultBlockState();
+        BlockState light = theme.state(com.chigusa.partydungeon.data.Theme.Part.LIGHT, 0, 0, 0);
+        BlockState bossFloor = theme.state(com.chigusa.partydungeon.data.Theme.Part.BOSS_FLOOR, 0, 0, 0);
         int bossTop = BOSS_HEIGHT - 1;
         BlockPos startWorld = d.plotOrigin().offset(d.start);
         Msg.info(p, "「" + name + "」を建てています…（" + size + "×" + size + "、高さ" + boxH + "）");
@@ -344,17 +345,17 @@ public final class PlanBuilder {
             if (t > 0) {
                 // 床の柱
                 if (y == 0) {
-                    return t == bossTop ? bossFloor : wall;
+                    return t == bossTop ? bossFloor : theme.state(com.chigusa.partydungeon.data.Theme.Part.FLOOR, x, y, z);
                 }
                 if (y < t) {
                     return air;
                 }
                 if (y == t) {
                     boolean lamp = t == bossTop ? fx % 4 == 2 && fz % 4 == 2 : fx % 6 == 3 && fz % 6 == 3;
-                    return lamp ? light : wall;
+                    return lamp ? light : theme.state(com.chigusa.partydungeon.data.Theme.Part.CEILING, x, y, z);
                 }
                 // 天井より上：となりにもっと高い部屋があれば、その高さまで壁でふさぐ
-                return y <= around ? wall : air;
+                return y <= around ? theme.state(com.chigusa.partydungeon.data.Theme.Part.WALL, x, y, z) : air;
             }
             if (around == 0) {
                 return air;
@@ -363,7 +364,12 @@ public final class PlanBuilder {
             if (around == bossTop && y == 4 && (fx + fz) % 4 == 0) {
                 return light;
             }
-            return y <= around ? wall : air;
+            if (y > around) {
+                return air;
+            }
+            com.chigusa.partydungeon.data.Theme.Part part = y == 0 ? com.chigusa.partydungeon.data.Theme.Part.FLOOR
+                    : com.chigusa.partydungeon.data.Theme.Part.WALL;
+            return theme.state(part, x, y, z);
         }, () -> {
             ws.setBlockAndUpdate(startWorld, PDRegistry.START_MARKER.get().defaultBlockState());
             ServerPlayer now = server.getPlayerList().getPlayer(p.getUUID());

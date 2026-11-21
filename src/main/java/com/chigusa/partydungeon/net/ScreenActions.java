@@ -78,7 +78,8 @@ public final class ScreenActions {
             return;
         }
         PlanBuilder.build(p.server, p, plan, data.getString("name").trim(), Math.max(3, data.getInt("scale")),
-                Math.max(1, data.getInt("corridor")), data.getInt("height"), Blocks.STONE_BRICKS.defaultBlockState());
+                Math.max(1, data.getInt("corridor")), data.getInt("height"),
+                com.chigusa.partydungeon.data.Theme.byId(data.getString("theme")));
     }
 
     // ---------------------------------------------------------------- 製作メニュー
@@ -94,6 +95,7 @@ public final class ScreenActions {
             e.putString("name", d.name);
             e.putBoolean("published", d.published);
             e.putBoolean("locked", d.locked);
+            e.putString("theme", d.theme);
             e.putInt("revision", d.revision);
             e.putString("clear", d.clear.label);
             e.putInt("size", d.size);
@@ -131,7 +133,8 @@ public final class ScreenActions {
                 p.closeContainer();
                 WorkshopManager.create(server, p, data.getString("name").trim(),
                         Math.max(16, Math.min(PlanBuilder.MAX_SIZE, data.getInt("size"))),
-                        Math.max(8, Math.min(PlanBuilder.MAX_HEIGHT, data.getInt("height"))), Blocks.STONE_BRICKS.defaultBlockState());
+                        Math.max(8, Math.min(PlanBuilder.MAX_HEIGHT, data.getInt("height"))),
+                        com.chigusa.partydungeon.data.Theme.byId(data.getString("theme")));
             }
             default -> {
                 if (d == null) {
@@ -168,6 +171,29 @@ public final class ScreenActions {
                 d.published = false;
                 pd.setDirty();
                 Msg.ok(p, "「" + d.name + "」を非公開にしました。");
+                openManager(server, p, d.id);
+            }
+            case "theme" -> {
+                com.chigusa.partydungeon.data.Theme theme = com.chigusa.partydungeon.data.Theme.byId(data.getString("theme"));
+                net.minecraft.server.level.ServerLevel ws = WorkshopManager.workshop(server);
+                if (ws == null) {
+                    return;
+                }
+                d.theme = theme.id;
+                pd.setDirty();
+                BlockPos o = d.plotOrigin();
+                BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+                Msg.info(p, "「" + d.name + "」の見た目を「" + theme.label + "」に着せ替えています…");
+                com.chigusa.partydungeon.job.BlockJobs.add(com.chigusa.partydungeon.job.BlockJobs.custom(ws, o, d.size,
+                        d.height, d.size, (x, y, z) -> {
+                            m.set(o.getX() + x, o.getY() + y, o.getZ() + z);
+                            return theme.restyle(ws, m, ws.getBlockState(m), x, y, z, y);
+                        }, () -> {
+                            ServerPlayer now = server.getPlayerList().getPlayer(p.getUUID());
+                            if (now != null) {
+                                Msg.ok(now, "着せ替えができました！ 遊ぶ人に反映するには「もう一度公開」してください。");
+                            }
+                        }));
                 openManager(server, p, d.id);
             }
             case "lock" -> {

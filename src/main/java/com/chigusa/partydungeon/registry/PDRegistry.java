@@ -9,6 +9,13 @@ import com.chigusa.partydungeon.block.SpawnerMarkerBlock;
 import com.chigusa.partydungeon.block.SpawnerMarkerBlockEntity;
 import com.chigusa.partydungeon.block.StartMarkerBlock;
 import com.chigusa.partydungeon.item.PlanWandItem;
+import com.chigusa.partydungeon.trap.ArrowTrapBlock;
+import com.chigusa.partydungeon.trap.ArrowTrapBlockEntity;
+import com.chigusa.partydungeon.trap.EffectFloorBlock;
+import com.chigusa.partydungeon.trap.FloorKind;
+
+import java.util.EnumMap;
+import java.util.Map;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -67,6 +74,26 @@ public final class PDRegistry {
     public static final DeferredItem<Item> PLAN_WAND =
             ITEMS.register("plan_wand", () -> new PlanWandItem(new Item.Properties().stacksTo(1)));
 
+    // ---- 罠
+    public static final DeferredBlock<ArrowTrapBlock> ARROW_TRAP = BLOCKS.register("arrow_trap",
+            () -> new ArrowTrapBlock(BlockBehaviour.Properties.of().strength(1.5f, 6f).sound(SoundType.STONE).noLootTable()));
+    public static final DeferredItem<BlockItem> ARROW_TRAP_ITEM = ITEMS.registerSimpleBlockItem(ARROW_TRAP);
+    public static final Map<FloorKind, DeferredBlock<EffectFloorBlock>> FLOORS = new EnumMap<>(FloorKind.class);
+    public static final Map<FloorKind, DeferredItem<BlockItem>> FLOOR_ITEMS = new EnumMap<>(FloorKind.class);
+
+    static {
+        for (FloorKind k : FloorKind.values()) {
+            DeferredBlock<EffectFloorBlock> b = BLOCKS.register(k.id, () -> new EffectFloorBlock(k,
+                    BlockBehaviour.Properties.of().strength(1.5f, 6f).sound(SoundType.STONE).noLootTable()
+                            .lightLevel(s -> k.light)));
+            FLOORS.put(k, b);
+            FLOOR_ITEMS.put(k, ITEMS.registerSimpleBlockItem(b));
+        }
+    }
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ArrowTrapBlockEntity>> ARROW_TRAP_BE =
+            BLOCK_ENTITIES.register("arrow_trap",
+                    () -> BlockEntityType.Builder.of(ArrowTrapBlockEntity::new, ARROW_TRAP.get()).build(null));
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SpawnerMarkerBlockEntity>> SPAWNER_MARKER_BE =
             BLOCK_ENTITIES.register("spawner_marker",
                     () -> BlockEntityType.Builder.of(SpawnerMarkerBlockEntity::new, SPAWNER_MARKER.get()).build(null));
@@ -87,6 +114,8 @@ public final class PDRegistry {
                         out.accept(SPAWNER_MARKER_ITEM.get());
                         out.accept(GOAL_MARKER_ITEM.get());
                         out.accept(REWARD_MARKER_ITEM.get());
+                        out.accept(ARROW_TRAP_ITEM.get());
+                        FLOOR_ITEMS.values().forEach(i -> out.accept(i.get()));
                     })
                     .build());
 

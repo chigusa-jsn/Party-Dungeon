@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "partydungeon:block/slow_floor",
+    "side": "partydungeon:block/slow_floor_side",
+    "bottom": "partydungeon:block/slow_floor_side"
+  }
+}

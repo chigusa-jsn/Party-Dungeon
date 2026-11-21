@@ -142,16 +142,23 @@ public final class BlockJobs {
     }
 
     /** 床・壁・天井の外枠を建てて、中を空気にする（作業場の自動建築） */
-    public static Job frame(ServerLevel level, BlockPos origin, int size, int height, BlockState wall, Runnable done) {
+    public static Job frame(ServerLevel level, BlockPos origin, int size, int height,
+            com.chigusa.partydungeon.data.Theme theme, Runnable done) {
         return new BoxJob(level, origin, size, height, size, done) {
             @Override
             BlockState stateAt(int index, int x, int y, int z) {
                 boolean edge = y == 0 || y == height - 1 || x == 0 || x == size - 1 || z == 0 || z == size - 1;
                 // 天井に明かりを並べる（6ブロックおき）
                 if (y == height - 1 && x % 6 == 3 && z % 6 == 3 && x < size - 1 && z < size - 1) {
-                    return Blocks.SEA_LANTERN.defaultBlockState();
+                    return theme.state(com.chigusa.partydungeon.data.Theme.Part.LIGHT, x, y, z);
                 }
-                return edge ? wall : Blocks.AIR.defaultBlockState();
+                if (!edge) {
+                    return Blocks.AIR.defaultBlockState();
+                }
+                com.chigusa.partydungeon.data.Theme.Part part = y == 0 ? com.chigusa.partydungeon.data.Theme.Part.FLOOR
+                        : y == height - 1 ? com.chigusa.partydungeon.data.Theme.Part.CEILING
+                        : com.chigusa.partydungeon.data.Theme.Part.WALL;
+                return theme.state(part, x, y, z);
             }
         };
     }

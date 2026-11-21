@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/orientable",
+  "textures": {
+    "front": "partydungeon:block/arrow_trap_front",
+    "side": "partydungeon:block/arrow_trap_side",
+    "top": "partydungeon:block/arrow_trap_side"
+  }
+}

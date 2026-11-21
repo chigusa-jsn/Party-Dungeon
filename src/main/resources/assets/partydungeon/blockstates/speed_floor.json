@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "partydungeon:block/speed_floor"
+    }
+  }
+}

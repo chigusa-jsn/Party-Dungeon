@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "partydungeon:block/blind_floor",
+    "side": "partydungeon:block/blind_floor_side",
+    "bottom": "partydungeon:block/blind_floor_side"
+  }
+}

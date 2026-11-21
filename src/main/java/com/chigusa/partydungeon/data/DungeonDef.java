@@ -39,6 +39,8 @@ public final class DungeonDef {
     public boolean published;
     /** true なら、解放した人（リーダー）しか挑めない。解放は jsn-Craft の依頼のごほうびなど */
     public boolean locked;
+    /** 見た目のテーマ（Theme の id） */
+    public String theme = "stone";
     /** 公開した回数（ファイル更新の目印） */
     public int revision;
 
@@ -131,6 +133,7 @@ public final class DungeonDef {
         t.put("rewards", rw);
         t.putBoolean("published", published);
         t.putBoolean("locked", locked);
+        t.putString("theme", theme);
         t.putInt("revision", revision);
         return t;
     }
@@ -164,6 +167,9 @@ public final class DungeonDef {
         }
         d.published = t.getBoolean("published");
         d.locked = t.getBoolean("locked");
+        if (t.contains("theme")) {
+            d.theme = t.getString("theme");
+        }
         d.revision = t.getInt("revision");
         return d;
     }
