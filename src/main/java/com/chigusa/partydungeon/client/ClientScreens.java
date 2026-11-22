@@ -12,6 +12,7 @@ public final class ClientScreens {
             case "goal" -> mc.setScreen(new GoalScreen(data));
             case "plan" -> mc.setScreen(new PlanScreen(data));
             case "manager" -> mc.setScreen(new ManagerScreen(data));
+            case "bundle_preview" -> mc.setScreen(new BundlePreviewScreen(data));
             default -> {
             }
         }

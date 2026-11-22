@@ -51,6 +51,41 @@ public final class PDNetwork {
         }
     }
 
+    /** まとめて書き出し：サーバー → パソコン（ファイルの1かたまり） */
+    public record BundleDown(int id, int index, int total, String name, byte[] data) implements CustomPacketPayload {
+        public static final Type<BundleDown> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(PartyDungeon.MOD_ID, "bundle_down"));
+        public static final StreamCodec<ByteBuf, BundleDown> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, BundleDown::id,
+                ByteBufCodecs.VAR_INT, BundleDown::index,
+                ByteBufCodecs.VAR_INT, BundleDown::total,
+                ByteBufCodecs.stringUtf8(128), BundleDown::name,
+                ByteBufCodecs.byteArray(com.chigusa.partydungeon.workshop.Bundle.DOWN_CHUNK + 16), BundleDown::data,
+                BundleDown::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
+    /** まとめて読み込み：パソコン → サーバー（ファイルの1かたまり） */
+    public record BundleUp(int id, int index, int total, byte[] data) implements CustomPacketPayload {
+        public static final Type<BundleUp> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(PartyDungeon.MOD_ID, "bundle_up"));
+        public static final StreamCodec<ByteBuf, BundleUp> CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, BundleUp::id,
+                ByteBufCodecs.VAR_INT, BundleUp::index,
+                ByteBufCodecs.VAR_INT, BundleUp::total,
+                ByteBufCodecs.byteArray(com.chigusa.partydungeon.workshop.Bundle.UP_CHUNK + 16), BundleUp::data,
+                BundleUp::new);
+
+        @Override
+        public Type<? extends CustomPacketPayload> type() {
+            return TYPE;
+        }
+    }
+
     public static void register(RegisterPayloadHandlersEvent event) {
         var reg = event.registrar("2");
         reg.playToServer(OpenMenuPayload.TYPE, OpenMenuPayload.STREAM_CODEC, (payload, ctx) -> ctx.enqueueWork(() -> {
@@ -61,6 +96,17 @@ public final class PDNetwork {
         reg.playToClient(OpenScreen.TYPE, OpenScreen.CODEC, (payload, ctx) -> ctx.enqueueWork(() -> {
             if (FMLEnvironment.dist.isClient()) {
                 com.chigusa.partydungeon.client.ClientScreens.open(payload.screen(), payload.data());
+            }
+        }));
+        reg.playToClient(BundleDown.TYPE, BundleDown.CODEC, (payload, ctx) -> ctx.enqueueWork(() -> {
+            if (FMLEnvironment.dist.isClient()) {
+                com.chigusa.partydungeon.client.BundleClient.receive(payload);
+            }
+        }));
+        reg.playToServer(BundleUp.TYPE, BundleUp.CODEC, (payload, ctx) -> ctx.enqueueWork(() -> {
+            if (ctx.player() instanceof ServerPlayer sp) {
+                com.chigusa.partydungeon.workshop.Bundle.receive(sp, payload.id(), payload.index(), payload.total(),
+                        payload.data());
             }
         }));
         reg.playToServer(ScreenAction.TYPE, ScreenAction.CODEC, (payload, ctx) -> ctx.enqueueWork(() -> {

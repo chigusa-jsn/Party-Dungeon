@@ -41,6 +41,10 @@ public final class DungeonDef {
     public boolean locked;
     /** 見た目のテーマ（Theme の id） */
     public String theme = "stone";
+    /** どのパソコン・サーバーでも同じダンジョンだと分かる印（まとめて書き出し用） */
+    public String uid = "";
+    /** 最後に書き出し／読み込みしたときの中身の指紋（変更があったか見分ける） */
+    public String syncHash = "";
     /** 公開した回数（ファイル更新の目印） */
     public int revision;
 
@@ -135,6 +139,12 @@ public final class DungeonDef {
         t.putBoolean("locked", locked);
         t.putString("theme", theme);
         t.putInt("revision", revision);
+        if (!uid.isEmpty()) {
+            t.putString("uid", uid);
+        }
+        if (!syncHash.isEmpty()) {
+            t.putString("sync", syncHash);
+        }
         return t;
     }
 
@@ -171,7 +181,18 @@ public final class DungeonDef {
             d.theme = t.getString("theme");
         }
         d.revision = t.getInt("revision");
+        d.uid = t.getString("uid");
+        d.syncHash = t.getString("sync");
         return d;
+    }
+
+    /** 印がなければ付ける。付けたら true */
+    public boolean ensureUid() {
+        if (uid.isEmpty()) {
+            uid = UUID.randomUUID().toString();
+            return true;
+        }
+        return false;
     }
 
     /** 挑戦中に設定が書き換わっても影響しないよう、コピーを作る */

@@ -37,6 +37,13 @@ public final class ScreenActions {
             case "goal" -> saveGoal(p, data);
             case "plan" -> buildPlan(p, data);
             case "manager" -> manager(server, p, action, data);
+            case "bundle" -> {
+                if (action.equals("export")) {
+                    com.chigusa.partydungeon.workshop.Bundle.export(server, p);
+                } else if (action.equals("apply")) {
+                    com.chigusa.partydungeon.workshop.Bundle.apply(server, p, data);
+                }
+            }
             default -> {
             }
         }

@@ -119,6 +119,7 @@ public final class PDEvents {
         bus.addListener((PlayerEvent.PlayerLoggedOutEvent e) -> {
             if (e.getEntity() instanceof ServerPlayer p) {
                 RunManager.onLogout(p.server, p);
+                com.chigusa.partydungeon.workshop.Bundle.onLogout(p.getUUID());
                 com.chigusa.partydungeon.menu.ChatInput.forget(p.getUUID());
                 PartyManager.leave(p.server, p.getUUID(), p.getName().getString());
             }

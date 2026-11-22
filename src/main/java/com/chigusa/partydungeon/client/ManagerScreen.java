@@ -76,7 +76,7 @@ public class ManagerScreen extends PDScreen {
         listX = x0;
         listY = 50;
         listW = 150;
-        listH = Math.max(60, height - listY - 40);
+        listH = Math.max(60, height - listY - 66);
         px = x0 + listW + 10;
         int pw = total - listW - 10;
 
@@ -95,6 +95,13 @@ public class ManagerScreen extends PDScreen {
         } else {
             button("製作モードへ", x0 + (bw + 4) * 2, 24, bw, 20, b -> act("enter"));
         }
+
+        // 下の段：まとめて書き出し／読み込み（ダンジョン全部と jsn-Craft の依頼）
+        int hw = (listW - 4) / 2;
+        button("全部書き出し", listX, listY + listH + 16, hw, 20,
+                b -> PDNetwork.sendAction("bundle", "export", new CompoundTag()));
+        button("読み込み", listX + hw + 4, listY + listH + 16, hw, 20,
+                b -> minecraft.setScreen(new BundleFilesScreen(this)));
 
         CompoundTag d = current();
         if (d == null) {

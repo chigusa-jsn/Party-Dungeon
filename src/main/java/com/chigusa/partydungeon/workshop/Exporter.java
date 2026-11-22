@@ -105,6 +105,9 @@ public final class Exporter {
         }
         PDData data = PDData.get(server);
         CompoundTag defTag = t.getCompound("def").copy();
+        // 1つずつの読み込みは、いつも新しいダンジョンとして入れる
+        defTag.remove("uid");
+        defTag.remove("sync");
         String name = defTag.getString("name");
         if (data.findByName(name) != null && data.findByName(name).name.equals(name)) {
             if (skipSameName) {
